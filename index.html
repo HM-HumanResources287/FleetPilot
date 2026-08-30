@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>FleetPilot - بريميوم</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        :root {
+            --primary-color: #F5B041;
+            --bg-primary: #0A0A0A;
+            --bg-card: #1A1A1A;
+            --text-primary: #E8E8E8;
+            --text-secondary: #B0B0B0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 12px;
+            transition: background 0.3s, color 0.3s;
+        }
+        body.light-mode {
+            --bg-primary: #F5F5F5;
+            --bg-card: #F0F0F0;
+            --text-primary: #1A1A1A;
+            --text-secondary: #666;
+        }
+        .app-container {
+            max-width: 420px;
+            width: 100%;
+            background: var(--bg-primary);
+            border-radius: 40px;
+            padding: 16px 14px 80px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+            margin: 0 auto;
+            position: relative;
+            min-height: 700px;
+            transition: background 0.3s;
+            display: none;
+        }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 16px 14px;
+            margin-bottom: 14px;
+            border: 1px solid rgba(255,255,255,0.03);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            transition: background 0.3s;
+        }
+        .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-title i { color: var(--primary-color); font-size: 15px; }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .summary-item {
+            background: #121212;
+            border-radius: 14px;
+            padding: 12px 10px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.03);
+            transition: background 0.3s;
+        }
+        .summary-item .label {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .summary-item .value {
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 2px;
+            color: #FFF;
+            transition: filter 0.3s;
+        }
+        .summary-item .value.gold { color: #F5B041; }
+        .summary-item .value.green { color: #51CF66; }
+        .summary-item .value.red { color: #FF6B6B; }
+        .summary-item .value.purple { color: #6C5CE7; }
+        .summary-item .value.cyan { color: #00E5FF; }
+        .summary-item .value.pink { color: #FF6B9D; }
+        .value.hidden { filter: blur(8px); }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+        .input-group label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .input-group label i { color: var(--primary-color); font-size: 13px; }
+        .input-group input, .input-group textarea, .input-group select {
+            background: #121212;
+            border: 1px solid #2A2A2A;
+            border-radius: 12px;
+            padding: 10px 12px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #FFFFFF;
+            outline: none;
+            transition: 0.2s;
+            width: 100%;
+            font-family: 'Inter', sans-serif;
+        }
+        .input-group input:focus, .input-group textarea:focus, .input-group select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(245,176,65,0.12);
+        }
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), #E67E22);
+            border: none;
+            border-radius: 60px;
+            padding: 14px 18px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #0A0A0A;
+            width: 100%;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 4px 20px rgba(245,176,65,0.2);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-primary:hover { transform: scale(1.01); box-shadow: 0 6px 30px rgba(245,176,65,0.3); }
+        .btn-secondary {
+            background: var(--bg-card);
+            border: 1px solid #2A2A2A;
+            border-radius: 60px;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            width: 100%;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-secondary:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 6px;
+        }
+        .btn-sm { padding: 8px 12px; font-size: 12px; border-radius: 30px; }
+        .btn-danger { background: linear-gradient(135deg, #FF6B6B, #E74C3C); border: none; border-radius: 60px; padding: 10px 14px; font-size: 13px; font-weight: 600; color: #FFF; cursor: pointer; transition: 0.3s; font-family: 'Inter', sans-serif; }
+        .btn-danger:hover { transform: scale(1.02); }
+        .btn-success { background: linear-gradient(135deg, #51CF66, #2ECC71); border: none; border-radius: 60px; padding: 10px 14px; font-size: 13px; font-weight: 600; color: #0A0A0A; cursor: pointer; transition: 0.3s; font-family: 'Inter', sans-serif; }
+        .btn-success:hover { transform: scale(1.02); }
+        .btn-purple { background: linear-gradient(135deg, #6C5CE7, #4834D4); border: none; border-radius: 60px; padding: 10px 14px; font-size: 13px; font-weight: 600; color: #FFF; cursor: pointer; transition: 0.3s; font-family: 'Inter', sans-serif; }
+        .btn-purple:hover { transform: scale(1.02); }
+        .bottom-tabs {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-primary);
+            border-top: 1px solid #1A1A1A;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 12px;
+            max-width: 420px;
+            margin: 0 auto;
+            border-radius: 0 0 40px 40px;
+            z-index: 100;
+            overflow-x: auto;
+            transition: background 0.3s;
+        }
+        .bottom-tabs .tab-btn {
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 9px;
+            font-weight: 500;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+            padding: 4px 6px;
+            position: relative;
+            min-width: 36px;
+            flex-shrink: 0;
+        }
+        .bottom-tabs .tab-btn i { font-size: 17px; }
+        .bottom-tabs .tab-btn.active { color: var(--primary-color); }
+        .bottom-tabs .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            top: -8px;
+            width: 24px;
+            height: 3px;
+            background: var(--primary-color);
+            border-radius: 4px;
+        }
+        .bottom-tabs .tab-btn:hover { color: var(--primary-color); }
+        .toast-msg {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 12px 24px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 999;
+            border: 1px solid var(--primary-color);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.8);
+            max-width: 360px;
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+        }
+        .hidden { display: none !important; }
+        .shift-item, .expense-item, .debt-item, .fault-item, .income-item, .saving-item {
+            background: #121212;
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s;
+        }
+        .shift-item { border-right: 2px solid var(--primary-color); }
+        .expense-item { border-right: 2px solid #FF6B6B; }
+        .debt-item { border-right: 2px solid #6C5CE7; }
+        .fault-item { border-right: 2px solid #FDCB6E; }
+        .income-item { border-right: 2px solid #00E5FF; }
+        .saving-item { border-right: 2px solid #FF6B9D; }
+        .search-box {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .search-box input, .search-box select {
+            flex: 1;
+            min-width: 100px;
+            background: #121212;
+            border: 1px solid #2A2A2A;
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-size: 13px;
+            color: #FFF;
+            outline: none;
+            font-family: 'Inter', sans-serif;
+        }
+        .search-box input:focus, .search-box select:focus {
+            border-color: var(--primary-color);
+        }
+        .auth-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            max-width: 420px;
+            margin: 0 auto;
+        }
+        .auth-screen .auth-box {
+            background: var(--bg-card);
+            padding: 30px 20px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+        }
+        .auth-screen h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color), #F7DC6F);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+        }
+        .auth-screen .auth-box .input-group { margin-bottom: 16px; }
+        .auth-screen .auth-box .input-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            display: block;
+            margin-bottom: 4px;
+        }
+        .auth-screen .auth-box .input-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid #2A2A2A;
+            background: #121212;
+            color: #FFF;
+            font-size: 15px;
+            font-weight: 500;
+            outline: none;
+            transition: 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .auth-screen .auth-box .input-group input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(245,176,65,0.12);
+        }
+        .auth-screen .auth-box .btn-primary { margin-top: 8px; }
+        .auth-screen .auth-box .forgot-password {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #888;
+        }
+        .auth-screen .auth-box .forgot-password span {
+            color: #00E5FF;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .auth-screen .auth-box .forgot-password span:hover { text-decoration: underline; }
+        .admin-user-item {
+            background: #121212;
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-right: 3px solid #6C5CE7;
+        }
+        .admin-user-item .user-info {
+            font-size: 12px;
+            color: #B0B0B0;
+            flex: 1;
+        }
+        .admin-user-item .user-info strong { color: #FFF; }
+        .admin-user-item .user-actions i {
+            color: #888;
+            margin-right: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 16px;
+        }
+        .admin-user-item .user-actions i:hover { color: var(--primary-color); }
+        .admin-user-item .user-actions i.fa-trash-can:hover { color: #FF6B6B; }
+        .admin-user-item .user-actions i.fa-ban:hover { color: #FF6B6B; }
+        .admin-user-item .user-actions i.fa-check-circle:hover { color: #51CF66; }
+        .admin-user-item .user-actions i.fa-chart-simple:hover { color: #00E5FF; }
+        .admin-user-item .user-status {
+            font-size: 10px;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        .admin-user-item .user-status.active { background: #1E2A1E; color: #51CF66; }
+        .admin-user-item .user-status.disabled { background: #2A1E1E; color: #FF6B6B; }
+        .admin-user-item .user-status.admin { background: #2A1E2A; color: #F5B041; }
+        .debt-summary, .saving-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .debt-summary .ds-item, .saving-summary .ss-item {
+            background: #121212;
+            border-radius: 12px;
+            padding: 10px;
+            text-align: center;
+        }
+        .debt-summary .ds-item .ds-label, .saving-summary .ss-item .ss-label {
+            font-size: 10px;
+            color: #888;
+        }
+        .debt-summary .ds-item .ds-value, .saving-summary .ss-item .ss-value {
+            font-size: 16px;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+        .chart-container {
+            position: relative;
+            height: 150px;
+            margin: 8px 0;
+        }
+        .app-box {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 14px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: 0.3s;
+        }
+        .app-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        .visibility-toggle {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+        .visibility-toggle:hover { color: var(--primary-color); }
+        @media (max-width: 400px) {
+            .app-container { padding: 12px 10px 70px; }
+            .summary-item .value { font-size: 17px; }
+            .input-group input { font-size: 13px; padding: 8px 10px; }
+            .bottom-tabs .tab-btn { font-size: 7px; padding: 2px 2px; min-width: 28px; }
+            .bottom-tabs .tab-btn i { font-size: 13px; }
+            .debt-summary, .saving-summary { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ======== شاشة تسجيل الدخول ======== -->
+    <div id="loginScreen" class="auth-screen">
+        <h1>🚀 FleetPilot</h1>
+        <div class="auth-box">
+            <div class="input-group">
+                <label><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
+                <input type="email" id="loginEmail" placeholder="example@email.com" />
+            </div>
+            <div class="input-group">
+                <label><i class="fas fa-lock"></i> كلمة المرور</label>
+                <input type="password" id="loginPassword" placeholder="••••••••" />
+            </div>
+            <button class="btn-primary" onclick="login()">
+                <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+            </button>
+            <div class="forgot-password">
+                <span onclick="showForgotPassword()">نسيت كلمة المرور؟</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======== شاشة نسيت كلمة المرور ======== -->
+    <div id="forgotPasswordScreen" class="auth-screen hidden">
+        <h1>🚀 FleetPilot</h1>
+        <div class="auth-box">
+            <div class="input-group">
+                <label><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
+                <input type="email" id="resetEmail" placeholder="example@email.com" />
+            </div>
+            <button class="btn-primary" onclick="resetPassword()">
+                <i class="fas fa-paper-plane"></i> إرسال رابط إعادة التعيين
+            </button>
+            <div style="text-align:center; margin-top:10px; font-size:13px; color:#888;">
+                <span onclick="showLogin()" style="color:var(--primary-color); cursor:pointer;">العودة لتسجيل الدخول</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======== التطبيق الرئيسي ======== -->
+    <div class="app-container" id="app">
+
+        <!-- ======== الهيدر ======== -->
+        <div class="header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; padding:0 4px;">
+            <h1 style="font-size:20px; font-weight:700; background:linear-gradient(135deg, var(--primary-color), #F7DC6F); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">
+                <i class="fas fa-rocket" style="-webkit-text-fill-color:var(--primary-color);"></i> FleetPilot
+            </h1>
+            <div class="header-actions" style="display:flex; gap:10px;">
+                <i class="fas fa-bell" id="notificationBell" style="color:#888; cursor:pointer; font-size:18px;"></i>
+                <i class="fas fa-calendar-alt" onclick="showToast('📅 ' + new Date().toLocaleDateString('ar-EG'))" style="color:#888; cursor:pointer; font-size:18px;"></i>
+                <i class="fas fa-moon" id="themeToggle" onclick="toggleTheme()" style="color:#888; cursor:pointer; font-size:18px;"></i>
+                <i class="fas fa-sign-out-alt" onclick="logout()" style="color:#FF6B6B; cursor:pointer; font-size:18px;"></i>
+            </div>
+        </div>
+
+        <!-- ======== تبويب الرئيسية ======== -->
+        <div class="tab-content active" id="tab-dashboard">
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-chart-simple"></i> ملخص اليوم
+                    <div style="margin-right:auto; display:flex; gap:4px;">
+                        <button class="visibility-toggle" onclick="toggleVisibility('balance')" title="إخفاء/إظهار الرصيد" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:14px; padding:4px 8px; border-radius:8px; transition:0.2s;">
+                            <i class="fas fa-eye" id="balanceIcon"></i>
+                        </button>
+                        <button class="visibility-toggle" onclick="toggleVisibility('savings')" title="إخفاء/إظهار التوفير" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:14px; padding:4px 8px; border-radius:8px; transition:0.2s;">
+                            <i class="fas fa-eye" id="savingsIcon"></i>
+                        </button>
+                        <button class="visibility-toggle" onclick="toggleVisibility('maintenance')" title="إخفاء/إظهار المدخر للصيانة" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:14px; padding:4px 8px; border-radius:8px; transition:0.2s;">
+                            <i class="fas fa-eye" id="maintenanceIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="summary-grid">
+                    <div class="summary-item"><div class="label">صافي الشغل</div><div class="value gold" id="dashNetProfit">٠ ج</div></div>
+                    <div class="summary-item"><div class="label">المدخر للصيانة</div><div class="value green" id="dashMaintenanceFund">٠ ج</div></div>
+                    <div class="summary-item"><div class="label">الرصيد المتاح</div><div class="value cyan" id="dashAvailableBalance">٠ ج</div></div>
+                    <div class="summary-item"><div class="label">حساب التوفير</div><div class="value pink" id="dashSavings">٠ ج</div></div>
+                </div>
+                <div class="quick-summary" style="display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:10px;">
+                    <div class="qs-item" style="font-size:12px; color:var(--text-secondary);">ربح/ساعة <span class="gold" style="color:#F5B041; font-weight:600;" id="dashPerHour">٠ ج</span></div>
+                    <div class="qs-item" style="font-size:12px; color:var(--text-secondary);">ربح/كم <span class="green" style="color:#51CF66; font-weight:600;" id="dashPerKm">٠ ج</span></div>
+                    <div class="qs-item" style="font-size:12px; color:var(--text-secondary);">الشفتات <span id="dashShiftCount" style="font-weight:600;">٠</span></div>
+                    <div class="qs-item" style="font-size:12px; color:var(--text-secondary);">نسبة الصرف <span id="dashSpendingRate" style="color:#FF6B6B; font-weight:600;">٠٪</span></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i class="fas fa-crystal-ball"></i> توقع الربح اليومي</div>
+                <div style="font-size:28px; font-weight:700; color:#00E5FF; text-align:center; padding:6px 0;" id="profitPrediction">—</div>
+                <div style="font-size:12px; color:#888; text-align:center;" id="predictionNote">سجل شفتات لمدة ٣ أيام على الأقل للتفعيل</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i class="fas fa-chart-line"></i> الربح اليومي (آخر ٧ أيام)</div>
+                <div class="chart-container"><canvas id="dailyProfitChart"></canvas></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i class="fas fa-pie-chart"></i> توزيع المصاريف (آخر ٧ أيام)</div>
+                <div class="chart-container"><canvas id="expenseChart"></canvas></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i class="fas fa-clock-rotate-left"></i> آخر شفت</div>
+                <div id="lastShiftDisplay" style="color:#888; font-size:13px; text-align:center; padding:10px 0;">لا توجد شفتات مسجلة</div>
+            </div>
+
+            <div class="tip-box" style="background:linear-gradient(135deg, var(--bg-card), #121212); border-radius:14px; padding:12px 14px; border-right:3px solid #00E5FF; display:flex; align-items:flex-start; gap:10px; margin-top:6px;">
+                <i class="fas fa-lightbulb" style="color:#00E5FF; font-size:16px; margin-top:2px;"></i>
+                <div class="tip-text" style="font-size:12px; line-height:1.6; color:#C0C0C0;" id="dailyTip">
+                    <strong>نصيحة اليوم:</strong> سجل أول شفت في اليوم واضغط "حفظ" عشان تبدأ التتبع.
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== تبويب تسجيل الشفت ======== -->
+        <div class="tab-content" id="tab-shift">
+            <div class="card">
+                <div class="card-title"><i class="fas fa-pen-to-square"></i> تسجيل شفت جديد</div>
+                <div class="input-row">
+                    <div class="input-group"><label><i class="fas fa-calendar-day"></i> التاريخ</label><input type="date" id="shiftDate" /></div>
+                    <div class="input-group"><label><i class="fas fa-clock"></i> الوقت</label><input type="time" id="shiftTime" /></div>
+                </div>
+                <div class="input-row">
+                    <div class="input-group"><label><i class="fas fa-route"></i> المسافة الكلية (كم)</label><input type="number" id="shiftTotalKm" placeholder="مثال: ٢٠٠" /></div>
+                    <div class="input-group"><label><i class="fas fa-empty-set"></i> الفارغة (كم)</label><input type="number" id="shiftEmptyKm" placeholder="مثال: ٧٠" /></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:#888; margin:-4px 0 8px;">
+                    <span>المربحة = <strong style="color:#51CF66;" id="shiftProfitKm">٠ كم</strong></span>
+                    <span>نسبة الفاضي = <strong style="color:#FF6B6B;" id="shiftEmptyPercent">٠٪</strong></span>
+                </div>
+                <div class="input-group"><label><i class="far fa-clock"></i> ساعات العمل</label><input type="number" id="shiftHours" placeholder="مثال: ٨" step="0.5" /></div>
+                
+                <div style="margin-top:8px;">
+                    <div style="font-size:12px; color:#51CF66; margin-bottom:12px; background:#1E2A1E; padding:4px 12px; border-radius:16px; display:inline-block;">
+                        <i class="fas fa-check-circle"></i> صافي من التطبيقات
+                    </div>
+                    
+                    <!-- ======== أوبر ======== -->
+                    <div class="app-box" style="border-right: 4px solid #6C5CE7;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                            <span style="font-weight:700; font-size:16px; color:#6C5CE7;"><i class="fab fa-uber"></i> أوبر</span>
+                            <span style="font-size:11px; color:#51CF66; background:#1E2A1E; padding:4px 12px; border-radius:20px; font-weight:500;"><i class="fas fa-check-circle"></i> صافي</span>
+                        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label><i class="fas fa-money-bill-wave"></i> كاش</label>
+                                <input type="number" id="shiftUberCash" placeholder="المبلغ" style="border-color: #6C5CE7;" />
+                            </div>
+                            <div class="input-group">
+                                <label><i class="fas fa-credit-card"></i> محفظة</label>
+                                <input type="number" id="shiftUberWallet" placeholder="المبلغ" style="border-color: #6C5CE7;" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ======== ديدي ======== -->
+                    <div class="app-box" style="border-right: 4px solid #00B894;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                            <span style="font-weight:700; font-size:16px; color:#00B894;"><i class="fas fa-car"></i> ديدي</span>
+                            <span style="font-size:11px; color:#51CF66; background:#1E2A1E; padding:4px 12px; border-radius:20px; font-weight:500;"><i class="fas fa-check-circle"></i> صافي</span>
+                        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label><i class="fas fa-money-bill-wave"></i> كاش</label>
+                                <input type="number" id="shiftDidiCash" placeholder="المبلغ" style="border-color: #00B894;" />
+                            </div>
+                            <div class="input-group">
+                                <label><i class="fas fa-credit-card"></i> محفظة</label>
+                                <input type="number" id="shiftDidiWallet" placeholder="المبلغ" style="border-color: #00B894;" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ======== إندرايف ======== -->
+                    <div class="app-box" style="border-right: 4px solid #FDCB6E;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                            <span style="font-weight:700; font-size:16px; color:#FDCB6E;"><i class="fas fa-motorcycle"></i> إندرايف</span>
+                            <span style="font-size:11px; color:#51CF66; background:#1E2A1E; padding:4px 12px; border-radius:20px; font-weight:500;"><i class="fas fa-check-circle"></i> صافي</span>
+                        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label><i class="fas fa-money-bill-wave"></i> كاش</label>
+                                <input type="number" id="shiftIndriveCash" placeholder="المبلغ" style="border-color: #FDCB6E;" />
+                            </div>
+                            <div class="input-group">
+                                <label><i class="fas fa-credit-card"></i> محفظة</label>
+                                <input type="number" id="shiftIndriveWallet" placeholder="المبلغ" style="border-color: #FDCB6E;" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:6px;">
+                    <div class="card-title" style="margin-bottom:6px;"><i class="fas fa-receipt"></i> مصاريف الشغل</div>
+                    <div class="input-row"><div class="input-group"><label><i class="fas fa-gas-pump"></i> بنزين</label><input type="number" id="shiftFuel" placeholder="المبلغ" /></div><div class="input-group"><label><i class="fas fa-utensils"></i> أكل/شرب</label><input type="number" id="shiftFood" placeholder="المبلغ" /></div></div>
+                    <div class="input-row"><div class="input-group"><label><i class="fas fa-tools"></i> صيانة</label><input type="number" id="shiftMaintenance" placeholder="المبلغ" /></div><div class="input-group"><label><i class="fas fa-mobile-alt"></i> شحن</label><input type="number" id="shiftPhone" placeholder="المبلغ" /></div></div>
+                </div>
+                <div class="input-group"><label><i class="fas fa-pencil"></i> ملاحظات</label><textarea id="shiftNotes" placeholder="أي ملاحظات عن الشفت..." rows="2"></textarea></div>
+                <div class="btn-group">
+                    <button class="btn-primary" onclick="saveShift()"><i class="fas fa-save"></i> حفظ الشفت</button>
+                    <button class="btn-secondary" onclick="clearShiftForm()"><i class="fas fa-eraser"></i> مسح</button>
+                </div>
+                <input type="hidden" id="editShiftId" value="" />
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-list"></i> شفتات اليوم
+                    <button onclick="document.getElementById('shiftDate').focus()" style="margin-right:auto; background:none; border:none; color:var(--primary-color); cursor:pointer; font-size:18px;">
+                        <i class="fas fa-plus-circle"></i>
+                    </button>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="shiftSearch" placeholder="🔍 بحث في الشفتات..." oninput="renderShiftList()" />
+                    <input type="date" id="shiftFromDate" onchange="renderShiftList()" />
+                    <input type="date" id="shiftToDate" onchange="renderShiftList()" />
+                </div>
+                <div id="todayShiftList" class="shift-list">
+                    <div style="color:#666; text-align:center; padding:12px 0; font-size:13px;">لا توجد شفتات مسجلة</div>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:13px; color:#888; border-top:1px solid #1A1A1A; padding-top:10px;">
+                    <span>إجمالي اليوم</span>
+                    <span style="font-weight:700; color:#F5B041;" id="todayTotalDisplay">٠ ج</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== تبويب المصاريف الشخصية (مع زر إخفاء الرصيد) ======== -->
+        <div class="tab-content" id="tab-personal">
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-wallet"></i> الرصيد المتاح
+                    <div style="margin-right:auto; display:flex; gap:4px;">
+                        <button class="visibility-toggle" onclick="toggleVisibility('balance')" title="إخفاء/إظهار الرصيد">
+                            <i class="fas fa-eye" id="balanceIcon"></i>
+                        </button>
+                        <button class="visibility-toggle" onclick="toggleVisibility('savings')" title="إخفاء/إظهار التوفير">
+                            <i class="fas fa-eye" id="savingsIcon"></i>
+                        </button>
+                        <button class="visibility-toggle" onclick="toggleVisibility('debts')" title="إخفاء/إظهار الديون">
+                            <i class="fas fa-eye" id="debtsIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div style="font-size:32px; font-weight:700; color:#00E5FF; text-align:center; padding:8px 0;" id="availableBalance">٠ ج</div>
+                <div style="font-size:12px; color:#888; text-align:center;">
+                    <span>أرباح الشغل: <strong id="totalWorkEarnings" style="color:#F5B041;">٠ ج</strong></span>
+                    <span style="margin-right:12px;">دخل إضافي: <strong id="totalExtraIncome" style="color:#00E5FF;">٠ ج</strong></span>
+                    <span style="margin-right:12px;">المصاريف الشخصية: <strong id="totalPersonalExpenses" style="color:#FF6B6B;">٠ ج</strong></span>
+                    <span style="margin-right:12px;">الديون المسددة: <strong id="totalDebtPaidDisplay" style="color:#6C5CE7;">٠ ج</strong></span>
+                    <span style="margin-right:12px;">التوفير: <strong id="totalSavingsDisplay" style="color:#FF6B9D;">٠ ج</strong></span>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-plus-circle"></i> إضافة دخل إضافي</div>
+                <div class="input-row">
+                    <div class="input-group"><label><i class="fas fa-tag"></i> المصدر</label><select id="extraIncomeType"><option value="قبض">قبض</option><option value="جمعية">جمعية</option><option value="هدية">هدية</option><option value="مكافأة">مكافأة</option><option value="أخرى">أخرى</option></select></div>
+                    <div class="input-group"><label><i class="fas fa-money-bill"></i> المبلغ</label><input type="number" id="extraIncomeAmount" placeholder="المبلغ" /></div>
+                </div>
+                <div class="input-group"><label><i class="fas fa-pencil"></i> ملاحظات</label><input type="text" id="extraIncomeNote" placeholder="ملاحظات (اختياري)" /></div>
+                <button class="btn-purple" onclick="addExtraIncome()"><i class="fas fa-plus-circle"></i> إضافة دخل</button>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-pen-to-square"></i> إضافة مصروف شخصي</div>
+                <div class="input-row">
+                    <div class="input-group"><label><i class="fas fa-tag"></i> النوع</label><select id="personalExpenseType"><option value="جمعية">جمعية</option><option value="أكل برا">أكل برا</option><option value="فواتير">فواتير</option><option value="ترفيه">ترفيه</option><option value="ملابس">ملابس</option><option value="هدايا">هدايا</option><option value="علاج">علاج</option><option value="أخرى">أخرى</option></select></div>
+                    <div class="input-group"><label><i class="fas fa-money-bill"></i> المبلغ</label><input type="number" id="personalExpenseAmount" placeholder="المبلغ" /></div>
+                </div>
+                <div class="input-group"><label><i class="fas fa-pencil"></i> ملاحظات</label><input type="text" id="personalExpenseNote" placeholder="ملاحظات (اختياري)" /></div>
+                <button class="btn-danger" onclick="addPersonalExpense()"><i class="fas fa-minus-circle"></i> إضافة مصروف</button>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-list"></i> الدخل الإضافي</div>
+                <div id="extraIncomeList" class="income-list"><div style="color:#666; text-align:center; padding:12px 0; font-size:13px;">لا يوجد دخل إضافي</div></div>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-list"></i> المصاريف الشخصية</div>
+                <div id="personalExpenseList" class="expense-list"><div style="color:#666; text-align:center; padding:12px 0; font-size:13px;">لا توجد مصاريف شخصية</div></div>
+            </div>
+        </div>
+
+        <!-- ======== تبويب الديون ======== -->
+        <div class="tab-content" id="tab-debts">
+            <div class="card">
+                <div class="card-title"><i class="fas fa-hand-holding-dollar"></i> الديون</div>
+                <div class="debt-summary">
+                    <div class="ds-item"><div class="ds-label">إجمالي الديون</div><div class="ds-value" style="color:#FF6B6B;" id="totalDebts">٠ ج</div></div>
+                    <div class="ds-item"><div class="ds-label">المدفوع</div><div class="ds-value" style="color:#51CF66;" id="totalDebtPaid">٠ ج</div></div>
+                    <div class="ds-item"><div class="ds-label">المتبقي</div><div class="ds-value" style="color:#F5B041;" id="totalDebtRemaining">٠ ج</div></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-plus-circle"></i> إضافة دين جديد</div>
+                <div class="input-group"><label><i class="fas fa-tag"></i> اسم الدين</label><input type="text" id="debtName" placeholder="مثال: قسط الموتوسيكل" /></div>
+                <div class="input-group"><label><i class="fas fa-money-bill"></i> المبلغ الإجمالي</label><input type="number" id="debtTotal" placeholder="المبلغ" /></div>
+                <div class="input-group"><label><i class="fas fa-calendar"></i> تاريخ الاستحقاق <span style="font-size:10px; color:#888;">(اختياري)</span></label><input type="date" id="debtDueDate" /></div>
+                <button class="btn-primary" onclick="addDebt()"><i class="fas fa-plus"></i> إضافة دين</button>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-hand-holding-heart"></i> تسديد دين</div>
+                <div class="input-row">
+                    <div class="input-group"><label><i class="fas fa-list"></i> اختر الدين</label><select id="debtSelect"></select></div>
+                    <div class="input-group"><label><i class="fas fa-money-bill"></i> المبلغ المسدد</label><input type="number" id="debtPaymentAmount" placeholder="المبلغ" /></div>
+                </div>
+                <button class="btn-success" onclick="payDebt()"><i class="fas fa-check"></i> تسديد</button>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-list"></i> قائمة الديون</div>
+                <div id="debtList" class="debt-list"><div style="color:#666; text-align:center; padding:12px 0; font-size:13px;">لا توجد ديون مسجلة</div></div>
+            </div>
+        </div>
+
+        <!-- ======== تبويب التوفير ======== -->
+        <div class="tab-content" id="tab-savings">
+            <div class="card">
+                <div class="card-title"><i class="fas fa-piggy-bank"></i> حساب التوفير</div>
+                <div class="saving-summary">
+                    <div class="ss-item"><div class="ss-label">إجمالي التوفير</div><div class="ss-value" style="color:#FF6B9D;" id="totalSavings">٠ ج</div></div>
+                    <div class="ss-item"><div class="ss-label">تم إيداعه</div><div class="ss-value" style="color:#51CF66;" id="totalSavingsDeposited">٠ ج</div></div>
+                    <div class="ss-item"><div class="ss-label">تم سحبه</div><div class="ss-value" style="color:#FF6B6B;" id="totalSavingsWithdrawn">٠ ج</div></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-plus-circle"></i> إيداع في التوفير</div>
+                <div class="input-group"><label><i class="fas fa-money-bill"></i> المبلغ</label><input type="number" id="savingDepositAmount" placeholder="المبلغ" /></div>
+                <div class="input-group"><label><i class="fas fa-pencil"></i> ملاحظات</label><input type="text" id="savingDepositNote" placeholder="ملاحظات (اختياري)" /></div>
+                <button class="btn-success" onclick="depositToSavings()"><i class="fas fa-arrow-up"></i> إيداع</button>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-arrow-down"></i> سحب من التوفير</div>
+                <div class="input-group"><label><i class="fas fa-money-bill"></i> المبلغ</label><input type="number" id="savingWithdrawAmount" placeholder="المبلغ" /></div>
+                <div class="input-group"><label><i class="fas fa-pencil"></i> ملاحظات</label><input type="text" id="savingWithdrawNote" placeholder="ملاحظات (اختياري)" /></div>
+                <button class="btn-danger" onclick="withdrawFromSavings()"><i class="fas fa-arrow-down"></i> سحب</button>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-list"></i> سجل التوفير</div>
+                <div id="savingList" class="saving-list"><div style="color:#666; text-align:center; padding:12px 0; font-size:13px;">لا توجد حركات توفير</div></div>
+            </div>
+        </div>
+
+        <!-- ======== تبويب الأعطال ======== -->
+        <div class="tab-content" id="tab-faults">
+            <div class="card">
+                <div class="card-title"><i class="fas fa-tools"></i> تسجيل عطل</div>
+                <div class="input-group"><label><i class="fas fa-tag"></i> نوع العطل</label><select id="faultType"><option value="ميكانيكي">ميكانيكي</option><option value="كهربائي">كهربائي</option><option value="كاوتش">كاوتش</option><option value="حادث">حادث</option><option value="أخرى">أخرى</option></select></div>
+                <div class="input-group"><label><i class="fas fa-pencil"></i> وصف العطل</label><input type="text" id="faultDesc" placeholder="مثال: صوت غريب في الموتور" /></div>
+                <div class="input-row"><div class="input-group"><label><i class="fas fa-money-bill"></i> تكلفة الإصلاح</label><input type="number" id="faultCost" placeholder="التكلفة" /></div><div class="input-group"><label><i class="fas fa-clock"></i> وقت التوقف (ساعات)</label><input type="number" id="faultDowntime" placeholder="عدد الساعات" step="0.5" /></div></div>
+                <button class="btn-danger" onclick="addFault()"><i class="fas fa-plus"></i> تسجيل العطل</button>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-list"></i> سجل الأعطال</div>
+                <div id="faultList" class="fault-list"><div style="color:#666; text-align:center; padding:12px 0; font-size:13px;">لا توجد أعطال مسجلة</div></div>
+            </div>
+        </div>
+
+        <!-- ======== تبويب التقارير ======== -->
+        <div class="tab-content" id="tab-reports">
+            <div class="card"><div class="card-title"><i class="fas fa-calendar-week"></i> تقرير الأسبوع</div><div id="weeklyReport" style="font-size:13px; color:#B0B0B0; line-height:2;"><div>إجمالي الربح: <strong style="color:#F5B041;" id="weeklyProfit">٠ ج</strong></div><div>متوسط اليوم: <strong style="color:#51CF66;" id="weeklyAvg">٠ ج</strong></div><div>أفضل يوم: <strong style="color:#00E5FF;" id="weeklyBestDay">—</strong></div><div>أسوأ يوم: <strong style="color:#FF6B6B;" id="weeklyWorstDay">—</strong></div><div>عدد الشفتات: <strong id="weeklyShiftCount">٠</strong></div></div></div>
+            <div class="card"><div class="card-title"><i class="fas fa-chart-bar"></i> تحليل التطبيقات</div><div id="appAnalysis" style="font-size:13px; color:#B0B0B0; line-height:2;"><div>🟣 أوبر: <strong style="color:#6C5CE7;" id="appUberTotal">٠ ج</strong></div><div>🟢 ديدي: <strong style="color:#00B894;" id="appDidiTotal">٠ ج</strong></div><div>🟠 إندرايف: <strong style="color:#FDCB6E;" id="appIndriveTotal">٠ ج</strong></div><div style="margin-top:6px; border-top:1px solid #1A1A1A; padding-top:6px;">أفضل تطبيق: <strong style="color:#F5B041;" id="appBest">—</strong></div></div></div>
+            <div class="card"><div class="card-title"><i class="fas fa-pie-chart"></i> توزيع المصاريف</div><div id="expenseDistribution" style="font-size:13px; color:#B0B0B0; line-height:2;"><div>⛽ بنزين: <strong id="expFuel">٠ ج</strong></div><div>🍔 أكل/شرب: <strong id="expFood">٠ ج</strong></div><div>🔧 صيانة: <strong id="expMaintenance">٠ ج</strong></div><div>📱 شحن: <strong id="expPhone">٠ ج</strong></div><div>🛢️ زيت: <strong id="expOil">٠ ج</strong></div><div>💰 إهلاك: <strong id="expDepreciation">٠ ج</strong></div><div style="margin-top:6px; border-top:1px solid #1A1A1A; padding-top:6px; color:#B0B0B0;">💳 مصاريف شخصية: <strong style="color:#FF6B6B;" id="expPersonal">٠ ج</strong></div><div>💸 الديون المسددة: <strong style="color:#6C5CE7;" id="expDebt">٠ ج</strong></div><div>🔧 تكلفة الأعطال: <strong style="color:#FDCB6E;" id="expFaults">٠ ج</strong></div><div>🐷 التوفير: <strong style="color:#FF6B9D;" id="expSavings">٠ ج</strong></div></div></div>
+            <div class="card"><div class="card-title"><i class="fas fa-arrow-trend-up"></i> تحليل النفقات</div><div id="expenseAnalysis" style="font-size:13px; color:#B0B0B0; line-height:2;"><div>الشهر الحالي: <strong style="color:#F5B041;" id="currentMonthExpenses">٠ ج</strong></div><div>الشهر الماضي: <strong style="color:#51CF66;" id="lastMonthExpenses">٠ ج</strong></div><div>التغير: <strong id="expenseChange">٠٪</strong></div></div></div>
+            <div class="card"><div class="card-title"><i class="fas fa-bullseye"></i> الميزانية الشهرية</div><div style="display:flex; justify-content:space-between; font-size:13px; color:#B0B0B0;"><span>الميزانية المحددة: <strong style="color:#F5B041;" id="monthlyBudget">٠ ج</strong></span><span>المصروف حتى الآن: <strong style="color:#FF6B6B;" id="monthlySpent">٠ ج</strong></span></div><div style="background:#121212; border-radius:10px; height:8px; margin:8px 0; overflow:hidden;"><div id="budgetProgressBar" style="height:100%; width:0%; background:linear-gradient(90deg, #51CF66, #F5B041, #FF6B6B); border-radius:10px; transition:0.5s;"></div></div><div style="font-size:12px; color:#888; text-align:center;" id="budgetStatus">—</div></div>
+        </div>
+
+        <!-- ======== تبويب الصيانة ======== -->
+        <div class="tab-content" id="tab-maintenance">
+            <div class="card"><div class="card-title"><i class="fas fa-oil-can"></i> الزيت</div><div style="font-size:14px; margin-bottom:6px;"><span style="color:#888;">آخر تغيير:</span><span id="lastOilChange" style="color:#FFF;">—</span></div><div style="font-size:14px; margin-bottom:6px;"><span style="color:#888;">المتبقي:</span><span id="oilDaysLeft" style="color:#FF6B6B; font-weight:700;">—</span></div><div style="background:#121212; border-radius:10px; height:8px; margin:6px 0 10px; overflow:hidden;"><div id="oilProgressBar" style="height:100%; width:0%; background:linear-gradient(90deg, #F5B041, #E67E22); border-radius:10px; transition:0.5s;"></div></div><button class="btn-secondary btn-sm" onclick="resetOil()" style="padding:10px 14px; font-size:13px; border-radius:60px; background:var(--bg-card); border:1px solid #2A2A2A; color:var(--text-primary); cursor:pointer; width:100%;"><i class="fas fa-rotate"></i> تسجيل تغيير الزيت</button></div>
+            <div class="card"><div class="card-title"><i class="fas fa-circle-dollar"></i> المبلغ المدخر للصيانة</div><div style="font-size:28px; font-weight:700; color:#F5B041; text-align:center; padding:6px 0;" id="maintenanceFund">٠ ج</div><div style="font-size:12px; color:#888; text-align:center;"><span>قسط الزيت اليومي: <strong id="dailyOilCost" style="color:#FFF;">٢٤.٥ ج</strong></span><span style="margin-right:12px;">الإهلاك التراكمي: <strong id="totalDepreciation" style="color:#FFF;">٠ ج</strong></span></div></div>
+            <div class="card"><div class="card-title"><i class="fas fa-tire"></i> الإطارات</div><div style="font-size:13px; color:#B0B0B0; line-height:2;"><div>الإطار الخلفي: <strong id="rearTireStatus" style="color:#51CF66;">جيد</strong></div><div>الإطار الأمامي: <strong id="frontTireStatus" style="color:#51CF66;">جيد</strong></div><div style="margin-top:6px; border-top:1px solid #1A1A1A; padding-top:6px;">قسط الإطار اليومي: <strong id="dailyTireCost" style="color:#FFF;">٠ ج</strong></div></div></div>
+            <div class="tip-box" style="background:linear-gradient(135deg, var(--bg-card), #121212); border-radius:14px; padding:12px 14px; border-right:3px solid #00E5FF; display:flex; align-items:flex-start; gap:10px; margin-top:6px;"><i class="fas fa-bell" style="color:#00E5FF; font-size:16px; margin-top:2px;"></i><div class="tip-text" style="font-size:12px; line-height:1.6; color:#C0C0C0;" id="maintenanceTip"><strong>تنبيه:</strong> قم بتسجيل تاريخ تغيير الزيت لتفعيل العداد.</div></div>
+        </div>
+
+        <!-- ======== تبويب الإعدادات ======== -->
+        <div class="tab-content" id="tab-settings">
+            <div class="card">
+                <div class="card-title"><i class="fas fa-gear"></i> إعدادات عامة</div>
+                <div class="input-group"><label>نسبة الإهلاك اليومي <i class="fas fa-percent"></i></label><input type="number" id="settingDepreciation" value="5" step="0.5" /></div>
+                <div class="input-group"><label>سعر الزيت (ج) <i class="fas fa-oil-can"></i></label><input type="number" id="settingOilPrice" value="245" /></div>
+                <div class="input-group"><label>عدد أيام تغيير الزيت <i class="fas fa-calendar-alt"></i></label><input type="number" id="settingOilDays" value="10" /></div>
+                <div class="input-group"><label>سعر الإطار الخلفي (ج) <i class="fas fa-tire"></i></label><input type="number" id="settingRearTire" value="1200" /></div>
+                <div class="input-group"><label>سعر الإطار الأمامي (ج) <i class="fas fa-tire"></i></label><input type="number" id="settingFrontTire" value="800" /></div>
+                <div class="input-group"><label>عمر الإطار الافتراضي (كم) <i class="fas fa-route"></i></label><input type="number" id="settingTireLifespan" value="10000" /></div>
+                <div class="input-group"><label>الميزانية الشهرية (ج) <i class="fas fa-bullseye"></i></label><input type="number" id="settingMonthlyBudget" value="5000" /></div>
+                <div class="input-group"><label>الحد الائتماني (ج) <i class="fas fa-credit-card"></i></label><input type="number" id="settingCreditLimit" value="1000" /></div>
+                <div class="input-group"><label>نسبة التوفير التلقائي <i class="fas fa-piggy-bank"></i></label><input type="number" id="settingSavingRate" value="0" min="0" max="100" step="1" /><span style="font-size:10px; color:#888;">0% = إيقاف التوفير التلقائي</span></div>
+                <div class="input-group"><label><i class="fas fa-palette"></i> لون التطبيق</label><select id="themeColor" onchange="applyTheme()"><option value="#F5B041">ذهبي</option><option value="#6C5CE7">بنفسجي</option><option value="#00E5FF">أزرق نيون</option><option value="#51CF66">أخضر</option><option value="#FF6B6B">أحمر</option><option value="#FF6B9D">وردي</option></select></div>
+                <button class="btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> حفظ الإعدادات</button>
+                <div style="margin-top:16px; border-top:1px solid #2A2A2A; padding-top:16px;">
+                    <div class="card-title"><i class="fas fa-key"></i> تغيير كلمة المرور</div>
+                    <div class="input-group"><label>كلمة المرور الحالية</label><input type="password" id="currentPassword" placeholder="••••••••" /></div>
+                    <div class="input-group"><label>كلمة المرور الجديدة</label><input type="password" id="newPassword" placeholder="••••••••" /></div>
+                    <div class="input-group"><label>تأكيد كلمة المرور</label><input type="password" id="confirmPassword" placeholder="••••••••" /></div>
+                    <button class="btn-primary" onclick="changePassword()" style="background:linear-gradient(135deg, #6C5CE7, #4834D4);"><i class="fas fa-key"></i> تغيير كلمة المرور</button>
+                </div>
+                <button class="btn-secondary" style="margin-top:8px;" onclick="clearAllData()"><i class="fas fa-trash-can"></i> مسح البيانات المحلية</button>
+            </div>
+        </div>
+
+        <!-- ======== تبويب المشرف (يظهر بس للمشرفين) ======== -->
+        <div class="tab-content" id="tab-admin">
+            <div class="card"><div class="card-title"><i class="fas fa-user-plus"></i> إضافة مستخدم جديد</div><div class="input-group"><label><i class="fas fa-user"></i> اسم المستخدم</label><input type="text" id="adminNewUserName" placeholder="اسم المستخدم" /></div><div class="input-group"><label><i class="fas fa-envelope"></i> البريد الإلكتروني</label><input type="email" id="adminNewUserEmail" placeholder="example@email.com" /></div><div class="input-group"><label><i class="fas fa-lock"></i> كلمة مرور مؤقتة</label><input type="text" id="adminNewUserPassword" placeholder="كلمة المرور المؤقتة" /></div><button class="btn-success" onclick="adminAddUser()"><i class="fas fa-user-plus"></i> إضافة مستخدم</button></div>
+            <div class="card"><div class="card-title"><i class="fas fa-users"></i> قائمة المستخدمين</div><div id="adminUserList"></div></div>
+            <div class="card"><div class="card-title"><i class="fas fa-chart-bar"></i> إحصائيات عامة</div><div id="adminStats"></div></div>
+            <div class="card"><div class="card-title"><i class="fas fa-bullhorn"></i> إرسال إشعار للمستخدمين</div><div class="input-group"><label><i class="fas fa-pencil"></i> نص الإشعار</label><textarea id="adminNotificationText" rows="3" placeholder="اكتب الإشعار هنا..."></textarea></div><button class="btn-primary" onclick="sendAdminNotification()"><i class="fas fa-paper-plane"></i> إرسال الإشعار</button></div>
+            <div class="card"><div class="card-title"><i class="fas fa-file-pdf"></i> تقرير شهري</div><div class="input-group"><label><i class="fas fa-calendar"></i> اختر السائق</label><select id="adminReportUserSelect"></select></div><button class="btn-primary" onclick="generateUserReport()"><i class="fas fa-file-pdf"></i> تحميل التقرير PDF</button></div>
+        </div>
+
+        <!-- ======== الفوتر ======== -->
+        <div class="bottom-tabs">
+            <button class="tab-btn active" data-tab="tab-dashboard"><i class="fas fa-house"></i><span>الرئيسية</span></button>
+            <button class="tab-btn" data-tab="tab-shift"><i class="fas fa-pen-to-square"></i><span>تسجيل</span></button>
+            <button class="tab-btn" data-tab="tab-personal"><i class="fas fa-wallet"></i><span>مصاريفي</span></button>
+            <button class="tab-btn" data-tab="tab-debts"><i class="fas fa-hand-holding-dollar"></i><span>الديون</span></button>
+            <button class="tab-btn" data-tab="tab-savings"><i class="fas fa-piggy-bank"></i><span>التوفير</span></button>
+            <button class="tab-btn" data-tab="tab-faults"><i class="fas fa-tools"></i><span>الأعطال</span></button>
+            <button class="tab-btn" data-tab="tab-reports"><i class="fas fa-chart-simple"></i><span>التقارير</span></button>
+            <button class="tab-btn" data-tab="tab-maintenance"><i class="fas fa-wrench"></i><span>الصيانة</span></button>
+            <button class="tab-btn" data-tab="tab-settings"><i class="fas fa-sliders"></i><span>الإعدادات</span></button>
+            <!-- تبويب المشرف يظهر بس لو المستخدم Admin (بيتضاف بالجافا سكريبت) -->
+        </div>
+
+    </div>
+
+    <script>
+        // ============================================================
+        // ======== إعدادات Firebase ========
+        // ============================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyB05eM7eDiIUNv0KROZ1Lly_HauLlBqgDY",
+            authDomain: "fleetpilot-f61e1.firebaseapp.com",
+            projectId: "fleetpilot-f61e1",
+            storageBucket: "fleetpilot-f61e1.firebasestorage.app",
+            messagingSenderId: "639156853582",
+            appId: "1:639156853582:web:a992c55475a5d8c0d89c1f",
+            measurementId: "G-NHSEHVV5SS"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // ============================================================
+        // ======== المتغيرات العامة ========
+        // ============================================================
+        let currentUserData = null;
+        let userShifts = [];
+        let userExpenses = [];
+        let userDebts = [];
+        let userSavings = [];
+        let userFaults = [];
+        let userExtraIncome = [];
+        let allUsers = [];
+        let visibility = { balance: true, savings: true, debts: true, maintenance: true };
+
+        // ============================================================
+        // ======== دوال المصادقة ========
+        // ============================================================
+        function showLogin() {
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('forgotPasswordScreen').classList.add('hidden');
+        }
+
+        function showForgotPassword() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('forgotPasswordScreen').classList.remove('hidden');
+        }
+
+        function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            if (!email || !password) { showToast('⚠️ من فضلك أدخل البريد وكلمة المرور'); return; }
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    showToast('✅ تم تسجيل الدخول بنجاح');
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    document.getElementById('forgotPasswordScreen').classList.add('hidden');
+                    document.getElementById('app').style.display = 'block';
+                    loadUserData();
+                })
+                .catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        function resetPassword() {
+            const email = document.getElementById('resetEmail').value;
+            if (!email) { showToast('⚠️ من فضلك أدخل البريد الإلكتروني'); return; }
+            auth.sendPasswordResetEmail(email)
+                .then(() => { showToast('✅ تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني'); showLogin(); })
+                .catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        function logout() {
+            auth.signOut().then(() => {
+                document.getElementById('app').style.display = 'none';
+                document.getElementById('loginScreen').classList.remove('hidden');
+                showToast('👋 تم تسجيل الخروج');
+            });
+        }
+
+        // ============================================================
+        // ======== تحميل بيانات المستخدم مع التحديث الفوري ========
+        // ============================================================
+        function loadUserData() {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            db.collection('users').doc(user.uid).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        currentUserData = doc.data();
+                        // ✅ اتأكد إن المستخدم Admin قبل ما تضيف التبويب
+                        if (currentUserData.role === 'admin') {
+                            loadAdminPanel();
+                            loadAllUsers();
+                        }
+                    }
+                });
+
+            db.collection('shifts').where('userId', '==', user.uid).orderBy('date', 'desc')
+                .onSnapshot((snapshot) => {
+                    userShifts = [];
+                    snapshot.forEach((doc) => userShifts.push({ id: doc.id, ...doc.data() }));
+                    updateAll();
+                });
+
+            db.collection('personalExpenses').where('userId', '==', user.uid)
+                .onSnapshot((snapshot) => {
+                    userExpenses = [];
+                    snapshot.forEach((doc) => userExpenses.push({ id: doc.id, ...doc.data() }));
+                    updateAll();
+                });
+
+            db.collection('debts').where('userId', '==', user.uid)
+                .onSnapshot((snapshot) => {
+                    userDebts = [];
+                    snapshot.forEach((doc) => userDebts.push({ id: doc.id, ...doc.data() }));
+                    updateAll();
+                    updateDebtSelect();
+                });
+
+            db.collection('savings').where('userId', '==', user.uid)
+                .onSnapshot((snapshot) => {
+                    userSavings = [];
+                    snapshot.forEach((doc) => userSavings.push({ id: doc.id, ...doc.data() }));
+                    updateAll();
+                });
+
+            db.collection('faults').where('userId', '==', user.uid)
+                .onSnapshot((snapshot) => {
+                    userFaults = [];
+                    snapshot.forEach((doc) => userFaults.push({ id: doc.id, ...doc.data() }));
+                    updateAll();
+                });
+
+            db.collection('extraIncome').where('userId', '==', user.uid)
+                .onSnapshot((snapshot) => {
+                    userExtraIncome = [];
+                    snapshot.forEach((doc) => userExtraIncome.push({ id: doc.id, ...doc.data() }));
+                    updateAll();
+                });
+        }
+
+        // ============================================================
+        // ======== دوال الحسابات المساعدة ========
+        // ============================================================
+        function getTodayShifts() {
+            const today = new Date().toISOString().split('T')[0];
+            return userShifts.filter(s => s.date === today);
+        }
+
+        function getLast7DaysShifts() {
+            const today = new Date();
+            const weekAgo = new Date(today);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            const weekAgoStr = weekAgo.toISOString().split('T')[0];
+            return userShifts.filter(s => s.date >= weekAgoStr && s.date <= today.toISOString().split('T')[0]);
+        }
+
+        function getLast30DaysShifts() {
+            const today = new Date();
+            const monthAgo = new Date(today);
+            monthAgo.setDate(monthAgo.getDate() - 30);
+            const monthAgoStr = monthAgo.toISOString().split('T')[0];
+            return userShifts.filter(s => s.date >= monthAgoStr && s.date <= today.toISOString().split('T')[0]);
+        }
+
+        function getPreviousMonthShifts() {
+            const today = new Date();
+            const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const lastDayLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+            const startStr = firstDayLastMonth.toISOString().split('T')[0];
+            const endStr = lastDayLastMonth.toISOString().split('T')[0];
+            return userShifts.filter(s => s.date >= startStr && s.date <= endStr);
+        }
+
+        function calculateShiftTotals(shift) {
+            const uberTotal = (shift.uberCash || 0) + (shift.uberWallet || 0);
+            const didiTotal = (shift.didiCash || 0) + (shift.didiWallet || 0);
+            const indriveTotal = (shift.indriveCash || 0) + (shift.indriveWallet || 0);
+            const revenue = uberTotal + didiTotal + indriveTotal;
+            const expenses = (shift.fuel || 0) + (shift.food || 0) + (shift.maintenance || 0) + (shift.phone || 0);
+            return { revenue, expenses, uberTotal, didiTotal, indriveTotal };
+        }
+
+        function getSettings() {
+            const defaults = {
+                depreciationPercent: 5,
+                oilPrice: 245,
+                oilDays: 10,
+                rearTirePrice: 1200,
+                frontTirePrice: 800,
+                tireLifespan: 10000,
+                monthlyBudget: 5000,
+                creditLimit: 1000,
+                savingRate: 0,
+                lastOilChange: null,
+                themeColor: '#F5B041'
+            };
+            try {
+                const data = localStorage.getItem('fleetSettings');
+                if (!data) return defaults;
+                const parsed = JSON.parse(data);
+                return { ...defaults, ...parsed };
+            } catch { return defaults; }
+        }
+
+        function getOilCostPerDay() {
+            const s = getSettings();
+            return s.oilPrice / s.oilDays;
+        }
+
+        function getDepreciationAmount(revenue) {
+            const s = getSettings();
+            return revenue * (s.depreciationPercent / 100);
+        }
+
+        function getShiftNetProfit(shift) {
+            const t = calculateShiftTotals(shift);
+            const oilCost = getOilCostPerDay();
+            const depreciation = getDepreciationAmount(t.revenue);
+            return t.revenue - t.expenses - oilCost - depreciation;
+        }
+
+        function getTotalWorkEarnings() {
+            return userShifts.reduce((sum, sh) => sum + getShiftNetProfit(sh), 0);
+        }
+
+        function getMaintenanceFund() {
+            const s = getSettings();
+            const totalDays = userShifts.length > 0 ? new Set(userShifts.map(sh => sh.date)).size : 0;
+            const oilFund = totalDays * (s.oilPrice / s.oilDays);
+            let depreciationFund = 0;
+            userShifts.forEach(sh => {
+                const t = calculateShiftTotals(sh);
+                depreciationFund += getDepreciationAmount(t.revenue);
+            });
+            return oilFund + depreciationFund;
+        }
+
+        function getTotalExtraIncome() {
+            return userExtraIncome.reduce((sum, i) => sum + i.amount, 0);
+        }
+
+        function getSavingsTotal() {
+            return userSavings.reduce((sum, s) => {
+                if (s.type === 'deposit') return sum + s.amount;
+                if (s.type === 'withdraw') return sum - s.amount;
+                return sum;
+            }, 0);
+        }
+
+        function getSavingsDeposited() {
+            return userSavings.filter(s => s.type === 'deposit').reduce((sum, s) => sum + s.amount, 0);
+        }
+
+        function getSavingsWithdrawn() {
+            return userSavings.filter(s => s.type === 'withdraw').reduce((sum, s) => sum + s.amount, 0);
+        }
+
+        // ============================================================
+        // ======== دوال حفظ البيانات ========
+        // ============================================================
+        function saveShift() {
+            const user = auth.currentUser;
+            if (!user) { showToast('⚠️ من فضلك سجل الدخول أولاً'); return; }
+
+            const date = document.getElementById('shiftDate').value;
+            const time = document.getElementById('shiftTime').value;
+            const totalKm = parseFloat(document.getElementById('shiftTotalKm').value) || 0;
+            const emptyKm = parseFloat(document.getElementById('shiftEmptyKm').value) || 0;
+            const hours = parseFloat(document.getElementById('shiftHours').value) || 0;
+            const uberCash = parseFloat(document.getElementById('shiftUberCash').value) || 0;
+            const uberWallet = parseFloat(document.getElementById('shiftUberWallet').value) || 0;
+            const didiCash = parseFloat(document.getElementById('shiftDidiCash').value) || 0;
+            const didiWallet = parseFloat(document.getElementById('shiftDidiWallet').value) || 0;
+            const indriveCash = parseFloat(document.getElementById('shiftIndriveCash').value) || 0;
+            const indriveWallet = parseFloat(document.getElementById('shiftIndriveWallet').value) || 0;
+            const fuel = parseFloat(document.getElementById('shiftFuel').value) || 0;
+            const food = parseFloat(document.getElementById('shiftFood').value) || 0;
+            const maintenance = parseFloat(document.getElementById('shiftMaintenance').value) || 0;
+            const phone = parseFloat(document.getElementById('shiftPhone').value) || 0;
+            const notes = document.getElementById('shiftNotes').value || '';
+            const editId = document.getElementById('editShiftId').value;
+
+            if (!date) { showToast('⚠️ من فضلك أدخل التاريخ'); return; }
+            if (totalKm <= 0) { showToast('⚠️ من فضلك أدخل المسافة الكلية'); return; }
+
+            const shiftData = {
+                userId: user.uid, date, time, totalKm, emptyKm, hours,
+                uberCash, uberWallet, didiCash, didiWallet, indriveCash, indriveWallet,
+                fuel, food, maintenance, phone, notes,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            if (editId) {
+                db.collection('shifts').doc(editId).update(shiftData)
+                    .then(() => { document.getElementById('editShiftId').value = ''; showToast('✅ تم تعديل الشفت بنجاح'); })
+                    .catch((error) => { showToast('❌ ' + error.message); });
+            } else {
+                db.collection('shifts').add(shiftData)
+                    .then(() => {
+                        const settings = getSettings();
+                        const savingRate = settings.savingRate || 0;
+                        if (savingRate > 0) {
+                            const netProfit = getShiftNetProfit(shiftData);
+                            const savingAmount = netProfit * (savingRate / 100);
+                            if (savingAmount > 0) {
+                                return db.collection('savings').add({
+                                    userId: user.uid, type: 'deposit', amount: savingAmount,
+                                    note: `توفير تلقائي (${savingRate}%) من شفت ${date}`,
+                                    date: date, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                                });
+                            }
+                        }
+                    })
+                    .then(() => { showToast('✅ تم حفظ الشفت بنجاح'); clearShiftForm(); })
+                    .catch((error) => { showToast('❌ ' + error.message); });
+            }
+        }
+
+        function addExtraIncome() {
+            const user = auth.currentUser;
+            if (!user) { showToast('⚠️ من فضلك سجل الدخول أولاً'); return; }
+            const type = document.getElementById('extraIncomeType').value;
+            const amount = parseFloat(document.getElementById('extraIncomeAmount').value);
+            const note = document.getElementById('extraIncomeNote').value || '';
+            if (!amount || amount <= 0) { showToast('⚠️ من فضلك أدخل مبلغ صحيح'); return; }
+            db.collection('extraIncome').add({ userId: user.uid, type, amount, note, date: new Date().toISOString().split('T')[0], createdAt: firebase.firestore.FieldValue.serverTimestamp() })
+                .then(() => { document.getElementById('extraIncomeAmount').value = ''; document.getElementById('extraIncomeNote').value = ''; showToast('✅ تم إضافة الدخل الإضافي'); })
+                .catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        function addPersonalExpense() {
+            const user = auth.currentUser;
+            if (!user) { showToast('⚠️ من فضلك سجل الدخول أولاً'); return; }
+            const type = document.getElementById('personalExpenseType').value;
+            const amount = parseFloat(document.getElementById('personalExpenseAmount').value);
+            const note = document.getElementById('personalExpenseNote').value || '';
+            if (!amount || amount <= 0) { showToast('⚠️ من فضلك أدخل مبلغ صحيح'); return; }
+            db.collection('personalExpenses').add({ userId: user.uid, type, amount, note, date: new Date().toISOString().split('T')[0], createdAt: firebase.firestore.FieldValue.serverTimestamp() })
+                .then(() => { document.getElementById('personalExpenseAmount').value = ''; document.getElementById('personalExpenseNote').value = ''; showToast('✅ تم إضافة المصروف'); })
+                .catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        function addDebt() {
+            const user = auth.currentUser;
+            if (!user) { showToast('⚠️ من فضلك سجل الدخول أولاً'); return; }
+            const name = document.getElementById('debtName').value.trim();
+            const total = parseFloat(document.getElementById('debtTotal').value);
+            const dueDate = document.getElementById('debtDueDate').value;
+            if (!name) { showToast('⚠️ من فضلك أدخل اسم الدين'); return; }
+            if (!total || total <= 0) { showToast('⚠️ من فضلك أدخل مبلغ صحيح'); return; }
+            db.collection('debts').add({ userId: user.uid, name, total, paid: 0, dueDate: dueDate || null, createdAt: firebase.firestore.FieldValue.serverTimestamp(), status: 'active' })
+                .then(() => { document.getElementById('debtName').value = ''; document.getElementById('debtTotal').value = ''; document.getElementById('debtDueDate').value = ''; showToast('✅ تم إضافة الدين'); })
+                .catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        function payDebt() {
+            const user = auth.currentUser;
+            if (!user) { showToast('⚠️ من فضلك سجل الدخول أولاً'); return; }
+            const select = document.getElementById('debtSelect');
+            const debtId = select.value;
+            const amount = parseFloat(document.getElementById('debtPaymentAmount').value);
+            if (!debtId) { showToast('⚠️ من فضلك اختر دين'); return; }
+            if (!amount || amount <= 0) { showToast('⚠️ من فضلك أدخل مبلغ صحيح'); return; }
+            db.collection('debts').doc(debtId).get()
+                .then((doc) => {
+                    if (!doc.exists) { showToast('⚠️ الدين غير موجود'); return; }
+                    const debt = doc.data();
+                    const remaining = debt.total - debt.paid;
+                    if (amount > remaining) { showToast(`⚠️ المبلغ أكبر من المتبقي (المتبقي ${remaining.toFixed(0)} ج)`); return; }
+                    const newPaid = debt.paid + amount;
+                    const newStatus = newPaid >= debt.total ? 'paid' : 'active';
+                    return db.collection('debts').doc(debtId).update({ paid: newPaid, status: newStatus });
+                })
+                .then(() => { document.getElementById('debtPaymentAmount').value = ''; showToast(`✅ تم تسديد ${amount.toFixed(0)} ج`); })
+                .catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        function depositToSavings() {
+            const user = auth.currentUser;
+            if (!user) { showToast('⚠️ من فضلك سجل الدخول أولاً'); return; }
+            const amount = parseFloat(document.getElementById('savingDepositAmount').value);
+            const note = document.getElementById('savingDepositNote').value || '';
+            if (!amount || amount <= 0) { showToast('⚠️ من فضلك أدخل مبلغ صحيح'); return; }
+            db.collection('savings').add({ userId: user.uid, type: 'deposit', amount, note: note || 'إيداع يدوي', date: new Date().toISOString().split('T')[0], createdAt: firebase.firestore.FieldValue.serverTimestamp() })
+                .then(() => { document.getElementById('savingDepositAmount').value = ''; document.getElementById('savingDepositNote').value = ''; showToast(`✅ تم إيداع ${amount.toFixed(0)} ج في التوفير`); })
+                .catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        function withdrawFromSavings() {
+            const user = auth.currentUser;
+            if (!user) { showToast('⚠️ من فضلك سجل الدخول أولاً'); return; }
+            const amount = parseFloat(document.getElementById('savingWithdrawAmount').value);
+            const note = document.getElementById('savingWithdrawNote').value || '';
+            if (!amount || amount <= 0) { showToast('⚠️ من فضلك أدخل مبلغ صحيح'); return; }
+            const totalSavings = getSavingsTotal();
+            if (amount > totalSavings) { showToast(`⚠️ المبلغ أكبر من الرصيد (الرصيد ${totalSavings.toFixed(0)} ج)`); return; }
+            db.collection('savings').add({ userId: user.uid, type: 'withdraw', amount, note: note || 'سحب يدوي', date: new Date().toISOString().split('T')[0], createdAt: firebase.firestore.FieldValue.serverTimestamp() })
+                .then(() => { document.getElementById('savingWithdrawAmount').value = ''; document.getElementById('savingWithdrawNote').value = ''; showToast(`✅ تم سحب ${amount.toFixed(0)} ج من التوفير`); })
+                .catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        function addFault() {
+            const user = auth.currentUser;
+            if (!user) { showToast('⚠️ من فضلك سجل الدخول أولاً'); return; }
+            const type = document.getElementById('faultType').value;
+            const desc = document.getElementById('faultDesc').value.trim();
+            const cost = parseFloat(document.getElementById('faultCost').value) || 0;
+            const downtime = parseFloat(document.getElementById('faultDowntime').value) || 0;
+            if (!desc) { showToast('⚠️ من فضلك أدخل وصف العطل'); return; }
+            db.collection('faults').add({ userId: user.uid, type, desc, cost, downtime, date: new Date().toISOString().split('T')[0], createdAt: firebase.firestore.FieldValue.serverTimestamp() })
+                .then(() => { document.getElementById('faultDesc').value = ''; document.getElementById('faultCost').value = ''; document.getElementById('faultDowntime').value = ''; showToast('✅ تم تسجيل العطل'); })
+                .catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        // ============================================================
+        // ======== دوال عرض القوائم ========
+        // ============================================================
+        function renderShiftList() {
+            const container = document.getElementById('todayShiftList');
+            if (!container) return;
+            const search = document.getElementById('shiftSearch')?.value.toLowerCase() || '';
+            const fromDate = document.getElementById('shiftFromDate')?.value || '';
+            const toDate = document.getElementById('shiftToDate')?.value || '';
+            let filtered = userShifts.filter(sh => {
+                const matchSearch = sh.date.includes(search) || (sh.notes || '').toLowerCase().includes(search) || (sh.totalKm || 0).toString().includes(search);
+                const matchFrom = !fromDate || sh.date >= fromDate;
+                const matchTo = !toDate || sh.date <= toDate;
+                return matchSearch && matchFrom && matchTo;
+            });
+            if (filtered.length === 0) { container.innerHTML = '<div style="color:#666; text-align:center; padding:12px 0; font-size:13px;">لا توجد شفتات مطابقة</div>'; return; }
+            container.innerHTML = filtered.map((sh, idx) => {
+                const net = getShiftNetProfit(sh);
+                return `<div class="shift-item"><div class="shift-info" style="font-size:12px; color:#B0B0B0; flex:1;"><strong>#${idx + 1}</strong> ${sh.time || ''} · ${(sh.totalKm || 0).toFixed(0)} كم · <span style="color:#F5B041;">${net.toFixed(0)} ج</span>${sh.notes ? `<br><span style="color:#666;font-size:11px;">📝 ${sh.notes}</span>` : ''}<br><span style="color:#666;font-size:10px;">${sh.date}</span></div><div class="shift-actions" style="display:flex; gap:6px;"><i class="fas fa-pen-to-square" onclick="editShift('${sh.id}')" title="تعديل" style="color:#888; cursor:pointer; font-size:16px;"></i><i class="fas fa-trash-can" onclick="deleteShift('${sh.id}')" title="حذف" style="color:#888; cursor:pointer; font-size:16px;"></i></div></div>`;
+            }).join('');
+        }
+
+        function editShift(id) {
+            const shift = userShifts.find(s => s.id === id);
+            if (!shift) return;
+            document.getElementById('shiftDate').value = shift.date || '';
+            document.getElementById('shiftTime').value = shift.time || '';
+            document.getElementById('shiftTotalKm').value = shift.totalKm || '';
+            document.getElementById('shiftEmptyKm').value = shift.emptyKm || '';
+            document.getElementById('shiftHours').value = shift.hours || '';
+            document.getElementById('shiftUberCash').value = shift.uberCash || '';
+            document.getElementById('shiftUberWallet').value = shift.uberWallet || '';
+            document.getElementById('shiftDidiCash').value = shift.didiCash || '';
+            document.getElementById('shiftDidiWallet').value = shift.didiWallet || '';
+            document.getElementById('shiftIndriveCash').value = shift.indriveCash || '';
+            document.getElementById('shiftIndriveWallet').value = shift.indriveWallet || '';
+            document.getElementById('shiftFuel').value = shift.fuel || '';
+            document.getElementById('shiftFood').value = shift.food || '';
+            document.getElementById('shiftMaintenance').value = shift.maintenance || '';
+            document.getElementById('shiftPhone').value = shift.phone || '';
+            document.getElementById('shiftNotes').value = shift.notes || '';
+            document.getElementById('editShiftId').value = shift.id;
+            document.querySelector('[data-tab="tab-shift"]').click();
+            document.getElementById('tab-shift').scrollIntoView({ behavior: 'smooth' });
+            showToast('✏️ جارٍ تعديل الشفت');
+        }
+
+        function deleteShift(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا الشفت؟')) return;
+            db.collection('shifts').doc(id).delete().then(() => showToast('🗑️ تم حذف الشفت')).catch((error) => showToast('❌ ' + error.message));
+        }
+
+        function renderIncomeList() {
+            const container = document.getElementById('extraIncomeList');
+            if (!container) return;
+            const search = document.getElementById('incomeSearch')?.value.toLowerCase() || '';
+            const filtered = userExtraIncome.filter(i => i.type.toLowerCase().includes(search) || (i.note || '').toLowerCase().includes(search));
+            if (filtered.length === 0) { container.innerHTML = '<div style="color:#666; text-align:center; padding:12px 0; font-size:13px;">لا يوجد دخل إضافي</div>'; return; }
+            container.innerHTML = filtered.map(i => `<div class="income-item"><div class="income-info" style="font-size:12px; color:#B0B0B0; flex:1;"><strong>${i.type}</strong> · ${i.amount.toFixed(0)} ج${i.note ? ` · ${i.note}` : ''}<span style="color:#666;font-size:11px;display:block;">${i.date}</span></div><div class="income-actions"><i class="fas fa-trash-can" onclick="deleteExtraIncome('${i.id}')" title="حذف" style="color:#888; cursor:pointer; font-size:16px;"></i></div></div>`).join('');
+        }
+
+        function renderExpenseList() {
+            const container = document.getElementById('personalExpenseList');
+            if (!container) return;
+            const search = document.getElementById('expenseSearch')?.value.toLowerCase() || '';
+            const fromDate = document.getElementById('expenseFromDate')?.value || '';
+            const toDate = document.getElementById('expenseToDate')?.value || '';
+            const filtered = userExpenses.filter(e => {
+                const matchSearch = e.type.toLowerCase().includes(search) || (e.note || '').toLowerCase().includes(search) || (e.amount || 0).toString().includes(search);
+                const matchFrom = !fromDate || e.date >= fromDate;
+                const matchTo = !toDate || e.date <= toDate;
+                return matchSearch && matchFrom && matchTo;
+            });
+            if (filtered.length === 0) { container.innerHTML = '<div style="color:#666; text-align:center; padding:12px 0; font-size:13px;">لا توجد مصاريف شخصية</div>'; return; }
+            container.innerHTML = filtered.map(e => `<div class="expense-item"><div class="expense-info" style="font-size:12px; color:#B0B0B0; flex:1;"><strong>${e.type}</strong> · ${e.amount.toFixed(0)} ج${e.note ? ` · ${e.note}` : ''}<span style="color:#666;font-size:11px;display:block;">${e.date}</span></div><div class="expense-actions"><i class="fas fa-trash-can" onclick="deletePersonalExpense('${e.id}')" title="حذف" style="color:#888; cursor:pointer; font-size:16px;"></i></div></div>`).join('');
+        }
+
+        function renderDebtList() {
+            const container = document.getElementById('debtList');
+            if (!container) return;
+            const search = document.getElementById('debtSearch')?.value.toLowerCase() || '';
+            const status = document.getElementById('debtStatusFilter')?.value || 'all';
+            const filtered = userDebts.filter(d => {
+                const matchSearch = d.name.toLowerCase().includes(search);
+                const matchStatus = status === 'all' || (status === 'active' && d.status === 'active') || (status === 'paid' && d.status === 'paid');
+                return matchSearch && matchStatus;
+            });
+            if (filtered.length === 0) { container.innerHTML = '<div style="color:#666; text-align:center; padding:12px 0; font-size:13px;">لا توجد ديون مسجلة</div>'; return; }
+            container.innerHTML = filtered.map(d => {
+                const remaining = d.total - d.paid;
+                const statusText = d.status === 'paid' ? '✅ مسدد' : `⏳ متبقي ${remaining.toFixed(0)} ج`;
+                return `<div class="debt-item" style="border-right-color: ${d.status === 'paid' ? '#51CF66' : '#6C5CE7'};"><div class="debt-info" style="font-size:12px; color:#B0B0B0; flex:1;"><strong>${d.name}</strong> · ${d.total.toFixed(0)} ج<span style="color:${d.status === 'paid' ? '#51CF66' : '#F5B041'};">${statusText}</span>${d.dueDate ? ` · استحقاق: ${d.dueDate}` : ''}<span style="color:#666;font-size:11px;display:block;">تم التسجيل: ${d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleDateString('ar-EG') : ''}</span></div><div class="debt-actions"><i class="fas fa-trash-can" onclick="deleteDebt('${d.id}')" title="حذف" style="color:#888; cursor:pointer; font-size:16px;"></i></div></div>`;
+            }).join('');
+        }
+
+        function renderSavingList() {
+            const container = document.getElementById('savingList');
+            if (!container) return;
+            const search = document.getElementById('savingSearch')?.value.toLowerCase() || '';
+            const filtered = userSavings.filter(s => (s.note || '').toLowerCase().includes(search) || s.type.includes(search));
+            if (filtered.length === 0) { container.innerHTML = '<div style="color:#666; text-align:center; padding:12px 0; font-size:13px;">لا توجد حركات توفير</div>'; return; }
+            container.innerHTML = filtered.map(s => {
+                const isDeposit = s.type === 'deposit';
+                return `<div class="saving-item" style="border-right-color: ${isDeposit ? '#51CF66' : '#FF6B6B'};"><div class="saving-info" style="font-size:12px; color:#B0B0B0; flex:1;"><strong>${isDeposit ? '💰 إيداع' : '💸 سحب'}</strong> ${isDeposit ? '+' : '-'} ${s.amount.toFixed(0)} ج${s.note ? ` · ${s.note}` : ''}<span style="color:#666;font-size:11px;display:block;">${s.date}</span></div><div class="saving-actions"><i class="fas fa-trash-can" onclick="deleteSaving('${s.id}')" title="حذف" style="color:#888; cursor:pointer; font-size:16px;"></i></div></div>`;
+            }).join('');
+        }
+
+        function renderFaultList() {
+            const container = document.getElementById('faultList');
+            if (!container) return;
+            const search = document.getElementById('faultSearch')?.value.toLowerCase() || '';
+            const filtered = userFaults.filter(f => f.desc.toLowerCase().includes(search) || f.type.includes(search));
+            if (filtered.length === 0) { container.innerHTML = '<div style="color:#666; text-align:center; padding:12px 0; font-size:13px;">لا توجد أعطال مسجلة</div>'; return; }
+            container.innerHTML = filtered.map(f => `<div class="fault-item"><div class="fault-info" style="font-size:12px; color:#B0B0B0; flex:1;"><strong>${f.type}</strong> · ${f.desc}${f.cost > 0 ? ` · تكلفة: ${f.cost.toFixed(0)} ج` : ''}${f.downtime > 0 ? ` · توقف: ${f.downtime.toFixed(1)} ساعة` : ''}<span style="color:#666;font-size:11px;display:block;">${f.date}</span></div><div class="fault-actions"><i class="fas fa-trash-can" onclick="deleteFault('${f.id}')" title="حذف" style="color:#888; cursor:pointer; font-size:16px;"></i></div></div>`).join('');
+        }
+
+        // ============================================================
+        // ======== دوال الحذف ========
+        // ============================================================
+        function deleteExtraIncome(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا الدخل الإضافي؟')) return;
+            db.collection('extraIncome').doc(id).delete().then(() => showToast('🗑️ تم حذف الدخل الإضافي')).catch((error) => showToast('❌ ' + error.message));
+        }
+
+        function deletePersonalExpense(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا المصروف؟')) return;
+            db.collection('personalExpenses').doc(id).delete().then(() => showToast('🗑️ تم حذف المصروف')).catch((error) => showToast('❌ ' + error.message));
+        }
+
+        function deleteDebt(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا الدين؟')) return;
+            db.collection('debts').doc(id).delete().then(() => showToast('🗑️ تم حذف الدين')).catch((error) => showToast('❌ ' + error.message));
+        }
+
+        function deleteSaving(id) {
+            if (!confirm('هل أنت متأكد من حذف هذه الحركة؟')) return;
+            db.collection('savings').doc(id).delete().then(() => showToast('🗑️ تم حذف الحركة')).catch((error) => showToast('❌ ' + error.message));
+        }
+
+        function deleteFault(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا العطل؟')) return;
+            db.collection('faults').doc(id).delete().then(() => showToast('🗑️ تم حذف العطل')).catch((error) => showToast('❌ ' + error.message));
+        }
+
+        // ============================================================
+        // ======== دوال المشرف ========
+        // ============================================================
+        function loadAdminPanel() {
+            // ✅ اتأكد إن المستخدم Admin قبل ما تضيف التبويب
+            if (currentUserData?.role !== 'admin') return;
+
+            let adminTab = document.querySelector('[data-tab="tab-admin"]');
+            if (!adminTab) {
+                const tabs = document.querySelector('.bottom-tabs');
+                const btn = document.createElement('button');
+                btn.className = 'tab-btn';
+                btn.dataset.tab = 'tab-admin';
+                btn.innerHTML = '<i class="fas fa-user-shield"></i><span>المشرف</span>';
+                tabs.appendChild(btn);
+
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                        document.getElementById(this.dataset.tab).classList.add('active');
+                    });
+                });
+            }
+        }
+
+        function loadAllUsers() {
+            db.collection('users').get()
+                .then((snapshot) => {
+                    allUsers = [];
+                    snapshot.forEach((doc) => { allUsers.push({ id: doc.id, ...doc.data() }); });
+                    renderAdminUserList();
+                    updateAdminStats();
+                    updateAdminReportSelect();
+                });
+        }
+
+        function renderAdminUserList() {
+            const container = document.getElementById('adminUserList');
+            if (!container) return;
+            const search = document.getElementById('adminUserSearch')?.value.toLowerCase() || '';
+            const filtered = allUsers.filter(u => (u.name || '').toLowerCase().includes(search) || (u.email || '').toLowerCase().includes(search));
+            if (filtered.length === 0) { container.innerHTML = '<div style="color:#666; text-align:center; padding:12px 0;">لا يوجد مستخدمين</div>'; return; }
+            container.innerHTML = filtered.map(u => {
+                const isAdmin = u.role === 'admin';
+                const isDisabled = u.disabled === true;
+                const statusClass = isDisabled ? 'disabled' : (isAdmin ? 'admin' : 'active');
+                const statusText = isDisabled ? '⛔ معطل' : (isAdmin ? '👑 مشرف' : '✅ نشط');
+                return `<div class="admin-user-item" style="border-right-color: ${isAdmin ? '#F5B041' : '#6C5CE7'};"><div class="user-info"><strong>${u.name || 'بدون اسم'}</strong> · ${u.email}<span class="user-status ${statusClass}" style="font-size:10px; padding:2px 10px; border-radius:20px; font-weight:500; background:${isDisabled ? '#2A1E1E' : (isAdmin ? '#2A1E2A' : '#1E2A1E')}; color:${isDisabled ? '#FF6B6B' : (isAdmin ? '#F5B041' : '#51CF66')};">${statusText}</span><span style="color:#666;font-size:11px;display:block;">آخر تسجيل دخول: ${u.lastLogin ? new Date(u.lastLogin.seconds * 1000).toLocaleDateString('ar-EG') : 'غير معروف'} · شفتات: ${u.totalShifts || 0}</span></div><div class="user-actions" style="display:flex; gap:6px;">${!isAdmin ? `<i class="fas fa-crown" onclick="makeAdmin('${u.id}')" title="ترقية إلى مشرف" style="color:#F5B041; cursor:pointer; font-size:16px;"></i>` : ''}${isDisabled ? `<i class="fas fa-check-circle" onclick="enableUser('${u.id}')" title="تفعيل" style="color:#51CF66; cursor:pointer; font-size:16px;"></i>` : `<i class="fas fa-ban" onclick="disableUser('${u.id}')" title="تعطيل" style="color:#FF6B6B; cursor:pointer; font-size:16px;"></i>`}<i class="fas fa-chart-simple" onclick="viewUserReport('${u.id}')" title="عرض التقرير" style="color:#00E5FF; cursor:pointer; font-size:16px;"></i><i class="fas fa-trash-can" onclick="deleteUser('${u.id}')" title="حذف المستخدم" style="color:#888; cursor:pointer; font-size:16px;"></i></div></div>`;
+            }).join('');
+        }
+
+        function updateAdminStats() {
+            const container = document.getElementById('adminStats');
+            if (!container) return;
+            const totalUsers = allUsers.length;
+            const admins = allUsers.filter(u => u.role === 'admin').length;
+            const drivers = allUsers.filter(u => u.role !== 'admin').length;
+            const activeDrivers = allUsers.filter(u => u.role !== 'admin' && u.disabled !== true).length;
+            container.innerHTML = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div class="summary-item" style="background:#121212; border-radius:14px; padding:12px 10px; text-align:center;"><div class="label" style="font-size:10px; color:#888; text-transform:uppercase;">إجمالي المستخدمين</div><div class="value" style="color:#F5B041; font-size:20px; font-weight:700;">${totalUsers}</div></div><div class="summary-item" style="background:#121212; border-radius:14px; padding:12px 10px; text-align:center;"><div class="label" style="font-size:10px; color:#888; text-transform:uppercase;">المشرفين</div><div class="value" style="color:#51CF66; font-size:20px; font-weight:700;">${admins}</div></div><div class="summary-item" style="background:#121212; border-radius:14px; padding:12px 10px; text-align:center;"><div class="label" style="font-size:10px; color:#888; text-transform:uppercase;">السائقين النشطين</div><div class="value" style="color:#00E5FF; font-size:20px; font-weight:700;">${activeDrivers}</div></div><div class="summary-item" style="background:#121212; border-radius:14px; padding:12px 10px; text-align:center;"><div class="label" style="font-size:10px; color:#888; text-transform:uppercase;">إجمالي السائقين</div><div class="value" style="color:#6C5CE7; font-size:20px; font-weight:700;">${drivers}</div></div></div>`;
+        }
+
+        function updateAdminReportSelect() {
+            const select = document.getElementById('adminReportUserSelect');
+            if (!select) return;
+            select.innerHTML = '<option value="">اختر سائق</option>';
+            allUsers.filter(u => u.role !== 'admin').forEach(u => { select.innerHTML += `<option value="${u.id}">${u.name || u.email}</option>`; });
+        }
+
+        function adminAddUser() {
+            const name = document.getElementById('adminNewUserName').value.trim();
+            const email = document.getElementById('adminNewUserEmail').value.trim();
+            const password = document.getElementById('adminNewUserPassword').value;
+            if (!name || !email || !password) { showToast('⚠️ من فضلك املأ كل الحقول'); return; }
+            if (password.length < 6) { showToast('⚠️ كلمة المرور يجب أن تكون ٦ أحرف على الأقل'); return; }
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    return db.collection('users').doc(user.uid).set({ name, email, role: 'سائق', disabled: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(), lastLogin: null, totalShifts: 0 });
+                })
+                .then(() => { showToast('✅ تم إنشاء الحساب بنجاح'); document.getElementById('adminNewUserName').value = ''; document.getElementById('adminNewUserEmail').value = ''; document.getElementById('adminNewUserPassword').value = ''; loadAllUsers(); })
+                .catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        function makeAdmin(userId) {
+            if (!confirm('هل أنت متأكد من ترقية هذا المستخدم إلى مشرف؟')) return;
+            db.collection('users').doc(userId).update({ role: 'admin' }).then(() => { showToast('✅ تمت الترقية إلى مشرف'); loadAllUsers(); }).catch((error) => showToast('❌ ' + error.message));
+        }
+
+        function disableUser(userId) {
+            if (!confirm('هل أنت متأكد من تعطيل هذا المستخدم؟')) return;
+            db.collection('users').doc(userId).update({ disabled: true }).then(() => { showToast('⛔ تم تعطيل المستخدم'); loadAllUsers(); }).catch((error) => showToast('❌ ' + error.message));
+        }
+
+        function enableUser(userId) {
+            db.collection('users').doc(userId).update({ disabled: false }).then(() => { showToast('✅ تم تفعيل المستخدم'); loadAllUsers(); }).catch((error) => showToast('❌ ' + error.message));
+        }
+
+        function deleteUser(userId) {
+            if (!confirm('⚠️ هل أنت متأكد من حذف هذا المستخدم نهائياً؟')) return;
+            const collections = ['shifts', 'personalExpenses', 'debts', 'savings', 'faults', 'extraIncome'];
+            const promises = collections.map(col => db.collection(col).where('userId', '==', userId).get().then((snapshot) => { const batch = db.batch(); snapshot.forEach((doc) => batch.delete(doc.ref)); return batch.commit(); }));
+            Promise.all(promises).then(() => db.collection('users').doc(userId).delete()).then(() => { showToast('🗑️ تم حذف المستخدم'); loadAllUsers(); }).catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        function viewUserReport(userId) {
+            const user = allUsers.find(u => u.id === userId);
+            if (!user) { showToast('⚠️ المستخدم غير موجود'); return; }
+            let shifts = [], expenses = [], debts = [], savings = [], faults = [], income = [];
+            const loadPromises = [
+                db.collection('shifts').where('userId', '==', userId).orderBy('date', 'desc').get().then((snap) => { shifts = snap.docs.map(d => ({ id: d.id, ...d.data() })); }),
+                db.collection('personalExpenses').where('userId', '==', userId).get().then((snap) => { expenses = snap.docs.map(d => ({ id: d.id, ...d.data() })); }),
+                db.collection('debts').where('userId', '==', userId).get().then((snap) => { debts = snap.docs.map(d => ({ id: d.id, ...d.data() })); }),
+                db.collection('savings').where('userId', '==', userId).get().then((snap) => { savings = snap.docs.map(d => ({ id: d.id, ...d.data() })); }),
+                db.collection('faults').where('userId', '==', userId).get().then((snap) => { faults = snap.docs.map(d => ({ id: d.id, ...d.data() })); }),
+                db.collection('extraIncome').where('userId', '==', userId).get().then((snap) => { income = snap.docs.map(d => ({ id: d.id, ...d.data() })); })
+            ];
+            Promise.all(loadPromises).then(() => {
+                const totalShifts = shifts.length;
+                const totalRevenue = shifts.reduce((sum, s) => sum + calculateShiftTotals(s).revenue, 0);
+                const totalExpenses = shifts.reduce((sum, s) => sum + calculateShiftTotals(s).expenses, 0);
+                const totalDebts = debts.reduce((sum, d) => sum + d.total, 0);
+                const totalDebtPaid = debts.reduce((sum, d) => sum + d.paid, 0);
+                const totalSavings = savings.reduce((sum, s) => { if (s.type === 'deposit') return sum + s.amount; if (s.type === 'withdraw') return sum - s.amount; return sum; }, 0);
+                const totalFaultCost = faults.reduce((sum, f) => sum + f.cost, 0);
+                const totalIncome = income.reduce((sum, i) => sum + i.amount, 0);
+                const netProfit = totalRevenue - totalExpenses;
+                const msg = `📊 تقرير ${user.name || user.email}\n──────────────────\n🧾 الشفتات: ${totalShifts}\n💰 إجمالي الإيرادات: ${totalRevenue.toFixed(0)} ج\n💸 إجمالي المصاريف: ${totalExpenses.toFixed(0)} ج\n📈 صافي الربح: ${netProfit.toFixed(0)} ج\n💳 الديون المتبقية: ${(totalDebts - totalDebtPaid).toFixed(0)} ج\n🐷 التوفير: ${totalSavings.toFixed(0)} ج\n🔧 تكلفة الأعطال: ${totalFaultCost.toFixed(0)} ج\n💵 دخل إضافي: ${totalIncome.toFixed(0)} ج`;
+                showToast(msg.replace(/\n/g, ' · '));
+            }).catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        function generateUserReport() {
+            const userId = document.getElementById('adminReportUserSelect').value;
+            if (!userId) { showToast('⚠️ من فضلك اختر سائق'); return; }
+            const user = allUsers.find(u => u.id === userId);
+            if (!user) { showToast('⚠️ المستخدم غير موجود'); return; }
+            db.collection('shifts').where('userId', '==', userId).orderBy('date', 'desc').get().then((snapshot) => {
+                const shifts = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                let htmlContent = `<html dir="rtl"><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif;padding:20px}h1{color:#F5B041;text-align:center}.header{text-align:center;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin:15px 0}th{background:#F5B041;color:#fff;padding:8px;text-align:center}td{padding:8px;border:1px solid #ddd;text-align:center}.summary{display:flex;justify-content:space-around;margin:20px 0;flex-wrap:wrap;gap:10px}.summary-item{background:#f5f5f5;padding:10px 20px;border-radius:8px;text-align:center}.summary-item .value{font-size:18px;font-weight:bold;color:#F5B041}.footer{text-align:center;color:#888;margin-top:20px;font-size:12px}</style></head><body><div class="header"><h1>🚀 FleetPilot</h1><h2>تقرير ${user.name || user.email}</h2><p>تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')}</p></div><div class="summary"><div class="summary-item"><div class="label">عدد الشفتات</div><div class="value">${shifts.length}</div></div><div class="summary-item"><div class="label">إجمالي الإيرادات</div><div class="value">${shifts.reduce((s, sh) => s + calculateShiftTotals(sh).revenue, 0).toFixed(0)} ج</div></div><div class="summary-item"><div class="label">إجمالي المصاريف</div><div class="value">${shifts.reduce((s, sh) => s + calculateShiftTotals(sh).expenses, 0).toFixed(0)} ج</div></div></div><h3>تفاصيل الشفتات</h3><table><thead><tr><th>#</th><th>التاريخ</th><th>المسافة (كم)</th><th>الإيرادات</th><th>المصاريف</th><th>صافي الربح</th></tr></thead><tbody>${shifts.map((sh, i) => { const t = calculateShiftTotals(sh); const net = t.revenue - t.expenses; return `<tr><td>${i+1}</td><td>${sh.date}</td><td>${(sh.totalKm||0).toFixed(0)}</td><td>${t.revenue.toFixed(0)}</td><td>${t.expenses.toFixed(0)}</td><td style="color:${net>=0?'#51CF66':'#FF6B6B'};">${net.toFixed(0)}</td></tr>`; }).join('')}</tbody></table><div class="footer">تم إنشاء هذا التقرير بواسطة FleetPilot</div></body></html>`;
+                const element = document.createElement('div');
+                element.innerHTML = htmlContent;
+                document.body.appendChild(element);
+                html2pdf().set({ margin: 10, filename: `تقرير_${user.name || user.email}_${new Date().toISOString().split('T')[0]}.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save().then(() => { element.remove(); showToast('✅ تم تحميل التقرير'); });
+            }).catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        function sendAdminNotification() {
+            const text = document.getElementById('adminNotificationText').value.trim();
+            if (!text) { showToast('⚠️ من فضلك اكتب نص الإشعار'); return; }
+            db.collection('notifications').add({ text, createdAt: firebase.firestore.FieldValue.serverTimestamp(), from: 'admin', read: false }).then(() => { showToast('✅ تم إرسال الإشعار'); document.getElementById('adminNotificationText').value = ''; }).catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        // ============================================================
+        // ======== أزرار إخفاء/إظهار العناصر المالية ========
+        // ============================================================
+        function toggleVisibility(type) {
+            visibility[type] = !visibility[type];
+            const icon = document.getElementById(type + 'Icon');
+            if (icon) { icon.className = visibility[type] ? 'fas fa-eye' : 'fas fa-eye-slash'; }
+            updateVisibility();
+        }
+
+        function updateVisibility() {
+            const balanceEl = document.getElementById('availableBalance');
+            if (balanceEl) { balanceEl.textContent = visibility.balance ? (window._availableBalance?.toFixed(0) || '٠') + ' ج' : '••••••'; balanceEl.classList.toggle('hidden', !visibility.balance); }
+            const savingsEl = document.getElementById('totalSavingsDisplay');
+            if (savingsEl) { savingsEl.textContent = visibility.savings ? (window._totalSavings?.toFixed(0) || '٠') + ' ج' : '••••••'; savingsEl.classList.toggle('hidden', !visibility.savings); }
+            const debtsEl = document.getElementById('totalDebtRemaining');
+            if (debtsEl) { debtsEl.textContent = visibility.debts ? (window._totalDebtRemaining?.toFixed(0) || '٠') + ' ج' : '••••••'; debtsEl.classList.toggle('hidden', !visibility.debts); }
+            // كمان في الرئيسية
+            const dashBalance = document.getElementById('dashAvailableBalance');
+            if (dashBalance) { dashBalance.textContent = visibility.balance ? (window._availableBalance?.toFixed(0) || '٠') + ' ج' : '••••••'; dashBalance.classList.toggle('hidden', !visibility.balance); }
+            const dashSavings = document.getElementById('dashSavings');
+            if (dashSavings) { dashSavings.textContent = visibility.savings ? (window._totalSavings?.toFixed(0) || '٠') + ' ج' : '••••••'; dashSavings.classList.toggle('hidden', !visibility.savings); }
+            const dashMaintenance = document.getElementById('dashMaintenanceFund');
+            if (dashMaintenance) { dashMaintenance.textContent = visibility.maintenance ? (window._maintenanceFund?.toFixed(0) || '٠') + ' ج' : '••••••'; dashMaintenance.classList.toggle('hidden', !visibility.maintenance); }
+        }
+
+        // ============================================================
+        // ======== دوال الإعدادات ========
+        // ============================================================
+        function loadSettings() {
+            const s = getSettings();
+            const elIds = ['settingDepreciation', 'settingOilPrice', 'settingOilDays', 'settingRearTire', 'settingFrontTire', 'settingTireLifespan', 'settingMonthlyBudget', 'settingCreditLimit', 'settingSavingRate'];
+            const values = [s.depreciationPercent, s.oilPrice, s.oilDays, s.rearTirePrice, s.frontTirePrice, s.tireLifespan, s.monthlyBudget, s.creditLimit, s.savingRate];
+            elIds.forEach((id, i) => { const el = document.getElementById(id); if (el) el.value = values[i]; });
+            const themeColor = document.getElementById('themeColor');
+            if (themeColor) themeColor.value = s.themeColor || '#F5B041';
+            applyTheme();
+        }
+
+        function saveSettings() {
+            const settings = {
+                depreciationPercent: parseFloat(document.getElementById('settingDepreciation').value) || 5,
+                oilPrice: parseFloat(document.getElementById('settingOilPrice').value) || 245,
+                oilDays: parseFloat(document.getElementById('settingOilDays').value) || 10,
+                rearTirePrice: parseFloat(document.getElementById('settingRearTire').value) || 1200,
+                frontTirePrice: parseFloat(document.getElementById('settingFrontTire').value) || 800,
+                tireLifespan: parseFloat(document.getElementById('settingTireLifespan').value) || 10000,
+                monthlyBudget: parseFloat(document.getElementById('settingMonthlyBudget').value) || 5000,
+                creditLimit: parseFloat(document.getElementById('settingCreditLimit').value) || 1000,
+                savingRate: parseFloat(document.getElementById('settingSavingRate').value) || 0,
+                lastOilChange: getSettings().lastOilChange || null,
+                themeColor: document.getElementById('themeColor').value || '#F5B041'
+            };
+            localStorage.setItem('fleetSettings', JSON.stringify(settings));
+            applyTheme();
+            updateAll();
+            showToast('✅ تم حفظ الإعدادات');
+        }
+
+        function applyTheme() {
+            const color = document.getElementById('themeColor').value || '#F5B041';
+            document.documentElement.style.setProperty('--primary-color', color);
+            document.querySelectorAll('.btn-primary').forEach(btn => { btn.style.background = `linear-gradient(135deg, ${color}, #E67E22)`; });
+            localStorage.setItem('fleetThemeColor', color);
+        }
+
+        function changePassword() {
+            const current = document.getElementById('currentPassword').value;
+            const newPass = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            if (!current || !newPass || !confirm) { showToast('⚠️ من فضلك املأ كل الحقول'); return; }
+            if (newPass !== confirm) { showToast('⚠️ كلمة المرور الجديدة غير متطابقة'); return; }
+            if (newPass.length < 6) { showToast('⚠️ كلمة المرور يجب أن تكون ٦ أحرف على الأقل'); return; }
+            const user = auth.currentUser;
+            const credential = firebase.auth.EmailAuthProvider.credential(user.email, current);
+            user.reauthenticateWithCredential(credential).then(() => user.updatePassword(newPass)).then(() => {
+                showToast('✅ تم تغيير كلمة المرور بنجاح');
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+            }).catch((error) => { showToast('❌ ' + error.message); });
+        }
+
+        function clearAllData() {
+            if (confirm('⚠️ هل أنت متأكد من مسح كل البيانات المحلية؟ هذا لا يؤثر على Firebase')) {
+                localStorage.removeItem('fleetSettings');
+                localStorage.removeItem('fleetThemeColor');
+                loadSettings();
+                updateAll();
+                showToast('🗑️ تم مسح الإعدادات المحلية');
+            }
+        }
+
+        function resetOil() {
+            const settings = getSettings();
+            settings.lastOilChange = Date.now();
+            localStorage.setItem('fleetSettings', JSON.stringify(settings));
+            updateAll();
+            showToast('🛢️ تم تسجيل تغيير الزيت');
+        }
+
+        // ============================================================
+        // ======== دوال التحديث الرئيسية ========
+        // ============================================================
+        function updateAll() {
+            try {
+                const todayShifts = getTodayShifts();
+                const weekShifts = getLast7DaysShifts();
+                const monthShifts = getLast30DaysShifts();
+                const prevMonthShifts = getPreviousMonthShifts();
+
+                const totalWorkEarnings = getTotalWorkEarnings();
+                const totalExtraIncome = getTotalExtraIncome();
+                const totalPersonalExpenses = userExpenses.reduce((sum, e) => sum + e.amount, 0);
+                const totalDebts = userDebts.reduce((sum, d) => sum + d.total, 0);
+                const totalDebtPaid = userDebts.reduce((sum, d) => sum + d.paid, 0);
+                const totalDebtRemaining = totalDebts - totalDebtPaid;
+                const totalFaultCost = userFaults.reduce((sum, f) => sum + f.cost, 0);
+                const totalFaultDowntime = userFaults.reduce((sum, f) => sum + f.downtime, 0);
+                const totalSavings = getSavingsTotal();
+                const totalSavingsDeposited = getSavingsDeposited();
+                const totalSavingsWithdrawn = getSavingsWithdrawn();
+
+                const availableBalance = totalWorkEarnings + totalExtraIncome - totalPersonalExpenses - totalDebtPaid - totalFaultCost - totalSavings;
+
+                window._availableBalance = availableBalance;
+                window._totalSavings = totalSavings;
+                window._maintenanceFund = getMaintenanceFund();
+                window._totalDebtRemaining = totalDebtRemaining;
+
+                // ======== الرئيسية ========
+                let totalRevenue = 0, totalExpenses = 0, totalKm = 0, totalEmpty = 0, totalHours = 0;
+                let appTotals = { uber: 0, didi: 0, indrive: 0 };
+
+                todayShifts.forEach(sh => {
+                    const t = calculateShiftTotals(sh);
+                    totalRevenue += t.revenue;
+                    totalExpenses += t.expenses;
+                    totalKm += sh.totalKm || 0;
+                    totalEmpty += sh.emptyKm || 0;
+                    totalHours += sh.hours || 0;
+                    appTotals.uber += t.uberTotal;
+                    appTotals.didi += t.didiTotal;
+                    appTotals.indrive += t.indriveTotal;
+                });
+
+                const todayNetProfit = todayShifts.reduce((sum, sh) => sum + getShiftNetProfit(sh), 0);
+                const emptyPercent = totalKm > 0 ? (totalEmpty / totalKm) * 100 : 0;
+                const profitKm = totalKm - totalEmpty;
+                const profitPerHour = totalHours > 0 ? todayNetProfit / totalHours : 0;
+                const profitPerKm = profitKm > 0 ? todayNetProfit / profitKm : 0;
+                const totalSpending = totalPersonalExpenses + totalDebtPaid + totalFaultCost + totalSavings;
+                const spendingRate = (totalWorkEarnings + totalExtraIncome) > 0 ? (totalSpending / (totalWorkEarnings + totalExtraIncome)) * 100 : 0;
+                const appNames = { uber: '🟣 أوبر', didi: '🟢 ديدي', indrive: '🟠 إندرايف' };
+                const bestApp = Object.keys(appTotals).reduce((a, b) => appTotals[a] > appTotals[b] ? a : b, 'uber');
+
+                setElementText('dashNetProfit', todayNetProfit.toFixed(0) + ' ج');
+                setElementText('dashMaintenanceFund', getMaintenanceFund().toFixed(0) + ' ج');
+                setElementText('dashAvailableBalance', availableBalance.toFixed(0) + ' ج');
+                setElementText('dashSavings', totalSavings.toFixed(0) + ' ج');
+                setElementText('dashPerHour', profitPerHour.toFixed(2) + ' ج');
+                setElementText('dashPerKm', profitPerKm.toFixed(2) + ' ج');
+                setElementText('dashShiftCount', todayShifts.length);
+                setElementText('dashSpendingRate', spendingRate.toFixed(0) + '%');
+
+                const rateEl = document.getElementById('dashSpendingRate');
+                if (rateEl) rateEl.style.color = spendingRate > 50 ? '#FF6B6B' : '#51CF66';
+
+                const bestEl = document.getElementById('dashBestApp');
+                if (bestEl) bestEl.textContent = todayShifts.length > 0 ? appNames[bestApp] : '—';
+
+                // ======== توقع الربح ========
+                const predictionEl = document.getElementById('profitPrediction');
+                const predictionNote = document.getElementById('predictionNote');
+                if (weekShifts.length >= 3) {
+                    const weekProfits = weekShifts.map(sh => getShiftNetProfit(sh));
+                    const avgProfit = weekProfits.reduce((a, b) => a + b, 0) / weekProfits.length;
+                    const today = new Date();
+                    const dayOfWeek = today.getDay();
+                    const sameDayShifts = weekShifts.filter(sh => { const d = new Date(sh.date); return d.getDay() === dayOfWeek; });
+                    let prediction = avgProfit;
+                    if (sameDayShifts.length > 0) {
+                        const sameDayAvg = sameDayShifts.reduce((a, b) => a + getShiftNetProfit(b), 0) / sameDayShifts.length;
+                        prediction = (avgProfit * 0.6 + sameDayAvg * 0.4);
+                    }
+                    predictionEl.textContent = prediction.toFixed(0) + ' ج';
+                    predictionNote.textContent = `متوسط الربح اليومي ${avgProfit.toFixed(0)} ج`;
+                } else {
+                    predictionEl.textContent = '—';
+                    predictionNote.textContent = 'سجل شفتات لمدة ٣ أيام على الأقل للتفعيل';
+                }
+
+                // ======== آخر شفت ========
+                const lastShift = userShifts.length > 0 ? userShifts[0] : null;
+                const lastShiftEl = document.getElementById('lastShiftDisplay');
+                if (lastShiftEl) {
+                    if (lastShift) {
+                        const t = calculateShiftTotals(lastShift);
+                        lastShiftEl.innerHTML = `<div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;"><span><i class="fas fa-calendar"></i> ${lastShift.date}</span><span><i class="fas fa-clock"></i> ${lastShift.time || '—'}</span><span><i class="fas fa-route"></i> ${(lastShift.totalKm || 0).toFixed(0)} كم</span><span><i class="fas fa-coins"></i> ${t.revenue.toFixed(0)} ج</span><span style="color:#F5B041;"><i class="fas fa-wallet"></i> ${getShiftNetProfit(lastShift).toFixed(0)} ج</span></div>`;
+                    } else {
+                        lastShiftEl.textContent = 'لا توجد شفتات مسجلة';
+                    }
+                }
+
+                // ======== نصيحة اليوم ========
+                const tipEl = document.getElementById('dailyTip');
+                if (tipEl) {
+                    if (todayShifts.length === 0) {
+                        tipEl.innerHTML = '<strong>نصيحة اليوم:</strong> سجل أول شفت في اليوم واضغط "حفظ" عشان تبدأ التتبع.';
+                    } else if (emptyPercent > 30) {
+                        tipEl.innerHTML = '<strong>⚠️ نسبة الفاضي مرتفعة!</strong> حاول تغير منطقة العمل أو أوقات الذروة.';
+                    } else if (profitPerHour < 50) {
+                        tipEl.innerHTML = '<strong>📉 الربح لكل ساعة منخفض!</strong> فكر ترتاح أو تغير التوقيت.';
+                    } else if (spendingRate > 70) {
+                        tipEl.innerHTML = '<strong>💰 نسبة الصرف مرتفعة!</strong> راجع مصاريفك وديونك.';
+                    } else {
+                        tipEl.innerHTML = '<strong>🔥 أداء ممتاز!</strong> استمر على نفس المستوى.';
+                    }
+                }
+
+                // ======== المصاريف الشخصية ========
+                setElementText('availableBalance', availableBalance.toFixed(0) + ' ج');
+                setElementText('totalWorkEarnings', totalWorkEarnings.toFixed(0) + ' ج');
+                setElementText('totalExtraIncome', totalExtraIncome.toFixed(0) + ' ج');
+                setElementText('totalPersonalExpenses', totalPersonalExpenses.toFixed(0) + ' ج');
+                setElementText('totalDebtPaidDisplay', totalDebtPaid.toFixed(0) + ' ج');
+                setElementText('totalSavingsDisplay', totalSavings.toFixed(0) + ' ج');
+                setElementText('totalPersonalExpensesDisplay', totalPersonalExpenses.toFixed(0) + ' ج');
+                setElementText('personalNetDisplay', availableBalance.toFixed(0) + ' ج');
+
+                // ======== الديون ========
+                setElementText('totalDebts', totalDebts.toFixed(0) + ' ج');
+                setElementText('totalDebtPaid', totalDebtPaid.toFixed(0) + ' ج');
+                setElementText('totalDebtRemaining', totalDebtRemaining.toFixed(0) + ' ج');
+
+                // ======== التوفير ========
+                setElementText('totalSavings', totalSavings.toFixed(0) + ' ج');
+                setElementText('totalSavingsDeposited', totalSavingsDeposited.toFixed(0) + ' ج');
+                setElementText('totalSavingsWithdrawn', totalSavingsWithdrawn.toFixed(0) + ' ج');
+                const settings = getSettings();
+                setElementText('savingRateDisplay', settings.savingRate + '%');
+
+                // ======== الأعطال ========
+                setElementText('totalFaultCost', totalFaultCost.toFixed(0) + ' ج');
+                setElementText('totalFaultDowntime', totalFaultDowntime.toFixed(1) + ' ساعة');
+
+                // ======== التقارير ========
+                let weekProfit = 0;
+                let weekAppTotals = { uber: 0, didi: 0, indrive: 0 };
+                let weekExpTotals = { fuel: 0, food: 0, maintenance: 0, phone: 0, oil: 0, depreciation: 0 };
+                let dayMap = {};
+
+                weekShifts.forEach(sh => {
+                    const t = calculateShiftTotals(sh);
+                    const net = getShiftNetProfit(sh);
+                    weekProfit += net;
+                    weekAppTotals.uber += t.uberTotal;
+                    weekAppTotals.didi += t.didiTotal;
+                    weekAppTotals.indrive += t.indriveTotal;
+                    weekExpTotals.fuel += sh.fuel || 0;
+                    weekExpTotals.food += sh.food || 0;
+                    weekExpTotals.maintenance += sh.maintenance || 0;
+                    weekExpTotals.phone += sh.phone || 0;
+                    if (dayMap[sh.date]) { dayMap[sh.date] += net; } else { dayMap[sh.date] = net; }
+                });
+
+                const weekOilCost = new Set(weekShifts.map(s => s.date)).size * getOilCostPerDay();
+                const weekDepreciation = weekShifts.reduce((sum, sh) => sum + getDepreciationAmount(calculateShiftTotals(sh).revenue), 0);
+                weekExpTotals.oil = weekOilCost;
+                weekExpTotals.depreciation = weekDepreciation;
+
+                setElementText('weeklyProfit', weekProfit.toFixed(0) + ' ج');
+                const avg = weekShifts.length > 0 ? weekProfit / new Set(weekShifts.map(s => s.date)).size : 0;
+                setElementText('weeklyAvg', avg.toFixed(0) + ' ج');
+                setElementText('weeklyShiftCount', weekShifts.length);
+
+                const sortedDays = Object.keys(dayMap).sort((a, b) => dayMap[b] - dayMap[a]);
+                setElementText('weeklyBestDay', sortedDays.length > 0 ? sortedDays[0] : '—');
+                setElementText('weeklyWorstDay', sortedDays.length > 1 ? sortedDays[sortedDays.length - 1] : '—');
+
+                setElementText('appUberTotal', weekAppTotals.uber.toFixed(0) + ' ج');
+                setElementText('appDidiTotal', weekAppTotals.didi.toFixed(0) + ' ج');
+                setElementText('appIndriveTotal', weekAppTotals.indrive.toFixed(0) + ' ج');
+                const bestAppWeek = Object.keys(weekAppTotals).reduce((a, b) => weekAppTotals[a] > weekAppTotals[b] ? a : b, 'uber');
+                setElementText('appBest', weekShifts.length > 0 ? appNames[bestAppWeek] : '—');
+
+                setElementText('expFuel', weekExpTotals.fuel.toFixed(0) + ' ج');
+                setElementText('expFood', weekExpTotals.food.toFixed(0) + ' ج');
+                setElementText('expMaintenance', weekExpTotals.maintenance.toFixed(0) + ' ج');
+                setElementText('expPhone', weekExpTotals.phone.toFixed(0) + ' ج');
+                setElementText('expOil', weekExpTotals.oil.toFixed(0) + ' ج');
+                setElementText('expDepreciation', weekExpTotals.depreciation.toFixed(0) + ' ج');
+                setElementText('expPersonal', totalPersonalExpenses.toFixed(0) + ' ج');
+                setElementText('expDebt', totalDebtPaid.toFixed(0) + ' ج');
+                setElementText('expFaults', totalFaultCost.toFixed(0) + ' ج');
+                setElementText('expSavings', totalSavings.toFixed(0) + ' ج');
+
+                // ======== تحليل النفقات والميزانية ========
+                const currentMonthTotal = monthShifts.reduce((sum, sh) => sum + (sh.fuel || 0) + (sh.food || 0) + (sh.maintenance || 0) + (sh.phone || 0), 0);
+                const lastMonthTotal = prevMonthShifts.reduce((sum, sh) => sum + (sh.fuel || 0) + (sh.food || 0) + (sh.maintenance || 0) + (sh.phone || 0), 0);
+
+                setElementText('currentMonthExpenses', currentMonthTotal.toFixed(0) + ' ج');
+                setElementText('lastMonthExpenses', lastMonthTotal.toFixed(0) + ' ج');
+                const changePercent = lastMonthTotal > 0 ? ((currentMonthTotal - lastMonthTotal) / lastMonthTotal) * 100 : 0;
+                const changeEl = document.getElementById('expenseChange');
+                if (changeEl) { changeEl.textContent = (changePercent >= 0 ? '+' : '') + changePercent.toFixed(0) + '%'; changeEl.style.color = changePercent > 0 ? '#FF6B6B' : '#51CF66'; }
+
+                const monthlyBudget = settings.monthlyBudget || 5000;
+                const monthlySpent = currentMonthTotal + totalPersonalExpenses + totalDebtPaid + totalFaultCost;
+                setElementText('monthlyBudget', monthlyBudget.toFixed(0) + ' ج');
+                setElementText('monthlySpent', monthlySpent.toFixed(0) + ' ج');
+
+                const budgetProgress = Math.min(100, (monthlySpent / monthlyBudget) * 100);
+                const budgetBar = document.getElementById('budgetProgressBar');
+                if (budgetBar) budgetBar.style.width = budgetProgress + '%';
+
+                const budgetStatus = document.getElementById('budgetStatus');
+                if (budgetStatus) {
+                    if (budgetProgress > 100) { budgetStatus.textContent = '⚠️ تجاوزت الميزانية!'; budgetStatus.style.color = '#FF6B6B'; }
+                    else if (budgetProgress > 80) { budgetStatus.textContent = `⚠️ متبقي ${(monthlyBudget - monthlySpent).toFixed(0)} ج فقط`; budgetStatus.style.color = '#F5B041'; }
+                    else { budgetStatus.textContent = `✅ متبقي ${(monthlyBudget - monthlySpent).toFixed(0)} ج`; budgetStatus.style.color = '#51CF66'; }
+                }
+
+                // ======== الصيانة ========
+                const oilDaysLeft = settings.lastOilChange ? settings.oilDays - Math.floor((Date.now() - settings.lastOilChange) / (1000 * 60 * 60 * 24)) : null;
+
+                const lastOilEl = document.getElementById('lastOilChange');
+                if (lastOilEl) lastOilEl.textContent = settings.lastOilChange ? new Date(settings.lastOilChange).toLocaleDateString('ar-EG') : 'لم يسجل بعد';
+
+                const oilDaysEl = document.getElementById('oilDaysLeft');
+                if (oilDaysEl) oilDaysEl.textContent = oilDaysLeft !== null ? `${Math.max(0, oilDaysLeft)} يوم` : '—';
+
+                const oilProgress = oilDaysLeft !== null ? Math.max(0, Math.min(100, ((settings.oilDays - oilDaysLeft) / settings.oilDays) * 100)) : 0;
+                const oilBar = document.getElementById('oilProgressBar');
+                if (oilBar) oilBar.style.width = oilProgress + '%';
+
+                const fund = getMaintenanceFund();
+                setElementText('maintenanceFund', fund.toFixed(0) + ' ج');
+                setElementText('dailyOilCost', getOilCostPerDay().toFixed(1) + ' ج');
+
+                const totalDep = userShifts.reduce((sum, sh) => sum + getDepreciationAmount(calculateShiftTotals(sh).revenue), 0);
+                setElementText('totalDepreciation', totalDep.toFixed(0) + ' ج');
+
+                const rearCost = settings.rearTirePrice / (settings.tireLifespan / 30);
+                const frontCost = settings.frontTirePrice / (settings.tireLifespan / 30);
+                setElementText('dailyTireCost', (rearCost + frontCost).toFixed(2) + ' ج');
+
+                const tipMaintenance = document.getElementById('maintenanceTip');
+                if (tipMaintenance) {
+                    if (oilDaysLeft !== null && oilDaysLeft <= 2) {
+                        tipMaintenance.innerHTML = '<strong>⚠️ تنبيه عاجل!</strong> تبقى <strong>' + Math.max(0, oilDaysLeft) + '</strong> يوم على تغيير الزيت.';
+                    } else if (fund > settings.rearTirePrice) {
+                        tipMaintenance.innerHTML = '<strong>💰 خبر سار!</strong> المبلغ المدخر يكفي لتغيير إطار خلفي جديد.';
+                    } else {
+                        tipMaintenance.innerHTML = '<strong>🔧 نصيحة:</strong> استمر في التوفير للصيانة الدورية.';
+                    }
+                }
+
+                renderShiftList();
+                renderIncomeList();
+                renderExpenseList();
+                renderDebtList();
+                renderSavingList();
+                renderFaultList();
+                updateVisibility();
+                setTimeout(updateCharts, 300);
+
+            } catch (e) {
+                console.error('خطأ في التحديث:', e);
+            }
+        }
+
+        // ============================================================
+        // ======== دوال الرسوم البيانية ========
+        // ============================================================
+        let dailyChart = null;
+        let expenseChart = null;
+
+        function updateCharts() {
+            const weekShifts = getLast7DaysShifts();
+            const days = [];
+            const profits = [];
+            const expenses = [];
+
+            const sortedShifts = [...weekShifts].sort((a, b) => a.date.localeCompare(b.date));
+            const dateMap = {};
+
+            sortedShifts.forEach(sh => {
+                if (!dateMap[sh.date]) { dateMap[sh.date] = { profit: 0, expense: 0, shifts: [] }; }
+                const t = calculateShiftTotals(sh);
+                dateMap[sh.date].profit += getShiftNetProfit(sh);
+                dateMap[sh.date].expense += t.expenses;
+                dateMap[sh.date].shifts.push(sh);
+            });
+
+            Object.keys(dateMap).forEach(date => {
+                days.push(date);
+                profits.push(dateMap[date].profit);
+                expenses.push(dateMap[date].expense);
+            });
+
+            const dailyCtx = document.getElementById('dailyProfitChart');
+            if (dailyCtx) {
+                if (dailyChart) dailyChart.destroy();
+                dailyChart = new Chart(dailyCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: days.length > 0 ? days : ['لا توجد بيانات'],
+                        datasets: [{
+                            label: 'صافي الربح',
+                            data: days.length > 0 ? profits : [0],
+                            backgroundColor: 'rgba(245, 176, 65, 0.7)',
+                            borderColor: '#F5B041',
+                            borderWidth: 2,
+                            borderRadius: 6,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        onClick: (event, elements) => {
+                            if (elements.length > 0) {
+                                const index = elements[0].index;
+                                const date = days[index];
+                                const dayData = dateMap[date];
+                                if (dayData) {
+                                    const msg = `📊 تفاصيل يوم ${date}\nربح: ${dayData.profit.toFixed(0)} ج\nمصاريف: ${dayData.expense.toFixed(0)} ج\nعدد الشفتات: ${dayData.shifts.length}`;
+                                    showToast(msg);
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { labels: { color: '#888', font: { size: 10 } } },
+                            tooltip: { callbacks: { label: function(context) { return `الربح: ${context.raw.toFixed(0)} ج`; } } }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { color: '#888', font: { size: 10 } } },
+                            x: { ticks: { color: '#888', font: { size: 9 } } }
+                        }
+                    }
+                });
+            }
+
+            const expenseCtx = document.getElementById('expenseChart');
+            if (expenseCtx) {
+                if (expenseChart) expenseChart.destroy();
+                const data = [
+                    sortedShifts.reduce((s, sh) => s + (sh.fuel || 0), 0),
+                    sortedShifts.reduce((s, sh) => s + (sh.food || 0), 0),
+                    sortedShifts.reduce((s, sh) => s + (sh.maintenance || 0), 0),
+                    sortedShifts.reduce((s, sh) => s + (sh.phone || 0), 0),
+                    new Set(sortedShifts.map(s => s.date)).size * getOilCostPerDay(),
+                    sortedShifts.reduce((s, sh) => s + getDepreciationAmount(calculateShiftTotals(sh).revenue), 0)
+                ];
+                const labels = ['بنزين', 'أكل/شرب', 'صيانة', 'شحن', 'زيت', 'إهلاك'];
+                const colors = ['#F5B041', '#FF6B6B', '#6C5CE7', '#00E5FF', '#51CF66', '#FDCB6E'];
+
+                expenseChart = new Chart(expenseCtx, {
+                    type: 'doughnut',
+                    data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderColor: '#1A1A1A', borderWidth: 2 }] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        onClick: (event, elements) => {
+                            if (elements.length > 0) {
+                                const index = elements[0].index;
+                                const label = labels[index];
+                                const value = data[index];
+                                showToast(`💸 ${label}: ${value.toFixed(0)} ج`);
+                            }
+                        },
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: '#888', font: { size: 9 }, padding: 8 } },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percent = total > 0 ? (context.raw / total * 100).toFixed(1) : 0;
+                                        return `${context.label}: ${context.raw.toFixed(0)} ج (${percent}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // ============================================================
+        // ======== دوال مساعدة ========
+        // ============================================================
+        function setElementText(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        }
+
+        function setDefaultDateTime() {
+            const now = new Date();
+            document.getElementById('shiftDate').value = now.toISOString().split('T')[0];
+            document.getElementById('shiftTime').value = now.toTimeString().slice(0, 5);
+        }
+
+        function clearShiftForm() {
+            document.querySelectorAll('#tab-shift input, #tab-shift textarea').forEach(el => {
+                if (el.type !== 'date' && el.type !== 'time' && el.id !== 'editShiftId') el.value = '';
+            });
+            document.getElementById('editShiftId').value = '';
+            setDefaultDateTime();
+            document.getElementById('shiftProfitKm').textContent = '٠ كم';
+            document.getElementById('shiftEmptyPercent').textContent = '٠٪';
+        }
+
+        function updateShiftPreview() {
+            const total = parseFloat(document.getElementById('shiftTotalKm').value) || 0;
+            const empty = parseFloat(document.getElementById('shiftEmptyKm').value) || 0;
+            const profit = total - empty;
+            const percent = total > 0 ? (empty / total) * 100 : 0;
+            document.getElementById('shiftProfitKm').textContent = profit.toFixed(0) + ' كم';
+            document.getElementById('shiftEmptyPercent').textContent = percent.toFixed(0) + '%';
+        }
+
+        function showToast(msg) {
+            const old = document.querySelector('.toast-msg');
+            if (old) old.remove();
+            const div = document.createElement('div');
+            div.className = 'toast-msg';
+            div.textContent = msg;
+            document.body.appendChild(div);
+            setTimeout(() => {
+                div.style.opacity = '0';
+                div.style.transition = '0.3s';
+                setTimeout(() => div.remove(), 300);
+            }, 4000);
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const icon = document.getElementById('themeToggle');
+            icon.className = document.body.classList.contains('light-mode') ? 'fas fa-sun' : 'fas fa-moon';
+            const settings = getSettings();
+            settings.theme = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+            localStorage.setItem('fleetSettings', JSON.stringify(settings));
+        }
+
+        function loadTheme() {
+            const settings = getSettings();
+            if (settings.theme === 'light') {
+                document.body.classList.add('light-mode');
+                document.getElementById('themeToggle').className = 'fas fa-sun';
+            }
+        }
+
+        function updateDebtSelect() {
+            const select = document.getElementById('debtSelect');
+            if (!select) return;
+            const activeDebts = userDebts.filter(d => d.status === 'active');
+            select.innerHTML = '<option value="">اختر دين</option>';
+            activeDebts.forEach(d => {
+                const remaining = d.total - d.paid;
+                select.innerHTML += `<option value="${d.id}">${d.name} - متبقي ${remaining.toFixed(0)} ج</option>`;
+            });
+        }
+
+        // ============================================================
+        // ======== التهيئة عند تحميل الصفحة ========
+        // ============================================================
+        window.onload = function() {
+            loadTheme();
+            setDefaultDateTime();
+            loadSettings();
+
+            // ربط التبويبات
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                    const target = document.getElementById(this.dataset.tab);
+                    if (target) target.classList.add('active');
+                });
+            });
+
+            // المصادقة - من غير sessionStorage (الدخول التلقائي ملغي)
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    document.getElementById('forgotPasswordScreen').classList.add('hidden');
+                    document.getElementById('app').style.display = 'block';
+                    loadUserData();
+                } else {
+                    document.getElementById('app').style.display = 'none';
+                    document.getElementById('loginScreen').classList.remove('hidden');
+                    document.getElementById('forgotPasswordScreen').classList.add('hidden');
+                }
+            });
+
+            document.getElementById('shiftTotalKm').addEventListener('input', updateShiftPreview);
+            document.getElementById('shiftEmptyKm').addEventListener('input', updateShiftPreview);
+
+            document.getElementById('notificationBell').addEventListener('click', function() {
+                const today = new Date().toISOString().split('T')[0];
+                const todayShifts = userShifts.filter(s => s.date === today);
+                const totalEarnings = getTotalWorkEarnings();
+                const totalExp = userExpenses.reduce((sum, e) => sum + e.amount, 0);
+                const totalDebtPaid = userDebts.reduce((sum, d) => sum + d.paid, 0);
+                const totalFaultCost = userFaults.reduce((sum, f) => sum + f.cost, 0);
+                const totalSavings = getSavingsTotal();
+                const balance = totalEarnings + getTotalExtraIncome() - totalExp - totalDebtPaid - totalFaultCost - totalSavings;
+                showToast(`📊 الشفتات: ${todayShifts.length} | الرصيد: ${balance.toFixed(0)} ج`);
+            });
+        };
+    </script>
+</body>
+</html>
