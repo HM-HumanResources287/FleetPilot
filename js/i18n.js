@@ -1,5 +1,5 @@
 // ============================================================
-// ======== إدارة اللغات (i18n) - النسخة النهائية ========
+// ======== إدارة اللغات (i18n) ========
 // ============================================================
 
 let currentLang = localStorage.getItem('fleetLang') || 'ar';
@@ -21,9 +21,36 @@ async function loadLanguage(lang) {
   }
 }
 
-// ===== الترجمة الشاملة =====
+// تطبيق الترجمة على كل حاجة
 function applyTranslations() {
-  // 1. ترجمة العناصر اللي عليها data-i18n
+  console.log('🔄 تطبيق الترجمة...', currentLang);
+
+  // ===== 1. ترجمة التبويبات =====
+  const tabMap = {
+    'tab-dashboard': 'dashboard',
+    'tab-shift': 'shifts',
+    'tab-personal': 'expenses',
+    'tab-debts': 'debts',
+    'tab-savings': 'savings',
+    'tab-faults': 'faults',
+    'tab-reports': 'reports',
+    'tab-maintenance': 'maintenance',
+    'tab-settings': 'settings',
+    'tab-admin': 'admin'
+  };
+
+  document.querySelectorAll('.bottom-tabs .tab-btn').forEach(btn => {
+    const span = btn.querySelector('span');
+    if (!span) return;
+    const tabId = btn.getAttribute('data-tab');
+    const key = tabMap[tabId];
+    if (key && translations[key]) {
+      span.textContent = translations[key];
+      console.log('✅ ترجمة التبويب:', key, '→', translations[key]);
+    }
+  });
+
+  // ===== 2. ترجمة عناصر data-i18n =====
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (translations[key]) {
@@ -35,23 +62,48 @@ function applyTranslations() {
     }
   });
 
-  // 2. ترجمة كل النصوص الثابتة (حتى لو مش عليها data-i18n)
-  translateAllTexts();
+  // ===== 3. ترجمة عناوين البطاقات =====
+  document.querySelectorAll('.card-title').forEach(title => {
+    const text = title.textContent.trim();
+    if (translations[text]) {
+      const icon = title.querySelector('i');
+      title.innerHTML = '';
+      if (icon) title.appendChild(icon);
+      title.appendChild(document.createTextNode(' ' + translations[text]));
+    }
+  });
 
-  // 3. تحديث اتجاه الصفحة
+  // ===== 4. اتجاه الصفحة =====
   document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
   document.documentElement.lang = currentLang;
+
+  console.log('✅ انتهت الترجمة');
 }
 
-// ===== ترجمة كل النصوص في الصفحة =====
+// ===== ترجمة كل النصوص الثابتة =====
 function translateAllTexts() {
   const t = translations;
   if (!t) return;
 
-  // ===== كل النصوص في الصفحة =====
-  const allElements = document.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, div, label, button, a, li, td, th, strong, b, i, em, small, .card-title, .btn, .tab-btn, .summary-item .label, .summary-item .value, .input-group label, .app-label, .oil-status-text, .tip-text, .quick-summary .qs-item, .debt-info, .saving-info, .fault-info, .income-info, .expense-info, .shift-info, .admin-user-item .user-info, .comparison-table td, .comparison-table th, .setting-label span, .ds-item .ds-label, .ds-item .ds-value, .ss-item .ss-label, .ss-item .ss-value, .pin-box h3, .pin-box .pin-sub, .pin-box .pin-error, .pin-box .pin-attempts, .pin-box .pin-biometric, .auth-box .forgot-password, .auth-box .back-to-login, .auth-box .input-group label, .auth-box .btn span');
+  // شاشة تسجيل الدخول
+  const loginTitle = document.querySelector('#loginScreen h2');
+  if (loginTitle && t.welcome) loginTitle.textContent = t.welcome;
 
-  allElements.forEach(el => {
+  const loginBtn = document.querySelector('#loginScreen .btn-primary span');
+  if (loginBtn && t.login) loginBtn.textContent = t.login;
+
+  const forgotLink = document.querySelector('#loginScreen .forgot-password');
+  if (forgotLink && t.forgot_password) forgotLink.textContent = t.forgot_password;
+
+  // شاشة نسيت كلمة المرور
+  const resetBtn = document.querySelector('#forgotPasswordScreen .btn-primary span');
+  if (resetBtn && t.reset_password) resetBtn.textContent = t.reset_password;
+
+  const backLink = document.querySelector('#forgotPasswordScreen .back-to-login');
+  if (backLink && t.back_to_login) backLink.textContent = t.back_to_login;
+
+  // كل العناصر التانية
+  document.querySelectorAll('.card-title, .btn, .input-group label, .app-label, .oil-status-text, .tip-text, .quick-summary .qs-item, .debt-info, .saving-info, .fault-info, .income-info, .expense-info, .shift-info, .admin-user-item .user-info, .comparison-table td, .comparison-table th, .setting-label span, .ds-item .ds-label, .ds-item .ds-value, .ss-item .ss-label, .ss-item .ss-value, .pin-box h3, .pin-box .pin-sub, .pin-box .pin-error, .pin-box .pin-attempts, .pin-box .pin-biometric, .auth-box .forgot-password, .auth-box .back-to-login, .auth-box .input-group label, .auth-box .btn span').forEach(el => {
     const text = el.textContent.trim();
     if (text && t[text]) {
       el.textContent = t[text];
@@ -90,3 +142,10 @@ function t(key, params = {}) {
   });
   return text;
 }
+// ===== ترجمة كل التبويبات =====
+document.querySelectorAll('.bottom-tabs .tab-btn span[data-i18n]').forEach(span => {
+  const key = span.getAttribute('data-i18n');
+  if (translations[key]) {
+    span.textContent = translations[key];
+  }
+});
